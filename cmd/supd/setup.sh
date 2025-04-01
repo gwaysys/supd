@@ -3,30 +3,9 @@
 bootName=""
 case `uname` in
     "Linux"|"linux")
-        files="/etc/redhat-release /etc/issue"
-        for file in $files
-        do
-           if [ ! -f "$file" ]; then
-               continue
-           fi
-
-           sysname=$(cat $file |awk -F " " '{print $1}')
-           case $sysname in
-               "Debian")
-                   bootName="boot_debian.sh "
-                   break
-                   ;;
-               "Ubuntu")
-                   bootName="boot_debian.sh "
-                   break
-                   ;;
-               "CentOS")
-                   bootName="boot_centos.sh "
-                   break
-                   ;;
-           	# TODO: more system support
-           esac
-        done
+        if [ -d "/lib/systemd/system" ]; then
+            bootName="boot_systemd.sh "
+        fi
     ;;
     "Darwin")
         bootName="boot_darwin.sh"
@@ -35,7 +14,7 @@ case `uname` in
 esac
 
 if [ -z "${bootName}" ]; then
-    echo "System unknow"
+    echo "system not support, run supd by command './supd -c ./etc/supd/supd.ini'"
     exit 0
 fi
 
