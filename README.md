@@ -1,13 +1,3 @@
-# Introduction
-
-首先感谢原作者们的贡献，我一直使用python版的supervisor进行项目管理，期间为了性能与配置文件的统一曾尝试过使用go版本的supervisor，但前者的稳定性更好些，就一直没启用go版的supervisor，但我一直在关注着 [ochinchina/supervisor](https://github.com/ochinchina/supervisord)。
-
-First of all, thanks to the contributions of the original authors, I have been using the python version of supervisor for project management. During this period, I tried to use the go version of supervisor for the unification of performance and configuration files, but the former is more stable, and I have not enabled the go version of supervisor, but I have been concerned about in [ochinchina/supervisor](https://github.com/ochinchina/supervisord). 
-
-最近因个人在物联网上应用得比较多些了，比较迫切需要一个进程管理软件进行统一管理，于是启用与调试了go版的supervisor，发现改改还是比较能解决问题，我本想直接为原库做些贡献，但随着调试的深入，发现自己不进行大改就比较难跟上项目应用的速度，因此只能进行了大改，大改了就比较难合并进原项目了，因此开启了本项目。
-
-Recently, due to more personal applications on the Internet of Things, there is an urgent need for a process management software for unified management, so the go version of supervisor has been activated and debugged. It is found that the modification can solve the problem better. I wanted to contribute directly to the original library, but with the deepening of debugging, I found that I did not carry out much. It is more difficult to keep up with the speed of project application, so we can only make major changes, major changes will be more difficult to merge into the original project, so the project started.
-
 # Install
 
 ## Install from source
@@ -15,22 +5,22 @@ Recently, due to more personal applications on the Internet of Things, there is 
 ```text
 # Need to install golang before building.
 
-git clone https://github.com/gwaypg/supd.git
+git clone https://github.com/gwaysys/supd.git
 cd supd
-. env.sh
-cd cmd/supd
+./publish.sh
 ./setup.sh install # ./setup.sh clean # to remove install
 ```
 
 ## Install from binary
 
-Download binary package from https://github.com/gwaypg/supd/releases and decompress the package.
+Download binary package from https://github.com/gwaysys/supd/releases and decompress the package.
 
 ```text
 cd supd
 ./setup.sh install # ./setup.sh clean # to remove install
 ```
 
+首先感谢原作者们的贡献, 以下是原项目文档，[ochinchina/supervisor](https://github.com/ochinchina/supervisord)。
 ======================================================================================
 
 

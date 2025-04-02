@@ -14,26 +14,18 @@ case `uname` in
 esac
 
 if [ -z "${bootName}" ]; then
-    echo "system not support, run supd by command './supd -c ./etc/supd/supd.ini'"
+    echo "system not support, run supd by command './bin/supd -c ./etc/supd/supd.ini'"
     exit 0
 fi
 
 case "$1" in 
     "install")
-        if [ ! -f "./supd" ]; then
-            echo "Program supd not found, need build first."
-            exit 0
-        fi
         cd script
         ./${bootName} install
         cd ..
         echo "Install supd done"
         ;;
     "upgrade")
-        if [ ! -f "./supd" ]; then
-            echo "Program supd not found, need build first."
-            exit 0
-        fi
         cd script
         ./${bootName} upgrade
         cd ..

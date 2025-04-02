@@ -99,7 +99,7 @@ fi
 
 # call supevisorctl
 callSup(){
-    type supd >/dev/null 2>&1||{ echo >&2 "Aborted. \nRequire 'supd' but it's not found. \nGet supd from: https://github.com/gwaypg/supd/releases"; exit 0; }
+    type supd >/dev/null 2>&1||{ echo >&2 "Aborted. \nRequire 'supd' but it's not found. \nGet supd from: https://github.com/gwaysys/supd/releases"; exit 0; }
     sudo supd ctl $*
 }
 
@@ -508,7 +508,7 @@ case "$1" in
        echo ""
        echo "\$BUILD_ALL_PATH # Paths of build all, exmaple: 'cmd1 cmd2'"
        echo "\$BUILD_LDFLAGS # Env for go build -ldfalgs \$BUILD_LDFLAGS"
-       echo "\$BUILD_GIT_COMMIT # Env of the var path which git describe will write to, example: github.com/gwaypg/supd/version.GitCommit"
+       echo "\$BUILD_GIT_COMMIT # Env of the var path which git describe will write to, example: github.com/gwaysys/supd/version.GitCommit"
        echo ""
        echo "\$PUB_ROOT_RES # The resource folder name of the project root directory collected during publishing. If it is not filled in, it will be the default: etc"
        echo "\$PUB_APP_RES # The resource folder name in the current directory is applied when publishing. If it is not filled in, it defaults to: res public"
