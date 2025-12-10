@@ -5,8 +5,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/gwaypg/supd/faults"
-	"github.com/gwaypg/supd/filebak"
+	"github.com/gwaysys/supd/faults"
+	"github.com/gwaysys/supd/filebak"
 	"github.com/gwaylib/errors"
 )
 

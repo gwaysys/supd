@@ -3,7 +3,7 @@ package rpcclient
 import (
 	"fmt"
 
-	"github.com/gwaypg/supd/types"
+	"github.com/gwaysys/supd/types"
 	"github.com/gwaylib/errors"
 )
 

@@ -1,6 +1,6 @@
 [Unit]
 Description=Supervisor process control system for UNIX
-Documentation=https://github.com/gwaypg/supd
+Documentation=https://github.com/gwaysys/supd
 After=network.target
 
 [Service]

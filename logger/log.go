@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gwaypg/supd/events"
-	"github.com/gwaypg/supd/faults"
+	"github.com/gwaysys/supd/events"
+	"github.com/gwaysys/supd/faults"
 	"github.com/gwaylib/errors"
 )
 

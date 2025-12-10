@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/gwaypg/supd/util"
+	"github.com/gwaysys/supd/util"
 	"testing"
 )
 

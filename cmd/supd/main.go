@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/gwaypg/supd"
+	"github.com/gwaysys/supd"
 )
 
 func main() {

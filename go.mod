@@ -1,4 +1,4 @@
-module github.com/gwaypg/supd
+module github.com/gwaysys/supd
 
 go 1.13
 

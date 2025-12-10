@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Template from https://github.com/gwaypg/goapp
+# Template from https://github.com/gwaysys/goapp
 
 # 项目需要导出的程序环境变量
 # -------------------------------------------------
@@ -53,7 +53,7 @@ if [ ! -f $GOBIN/sup ]; then
     type curl >/dev/null 2>&1||{ echo -e >&2 "curl not found, need install at first."; exit 0; }
     echo "Download sup to bin."
     mkdir -p $GOBIN&& \
-    curl https://raw.githubusercontent.com/gwaypg/supd/v1/bin/sup -o $GOBIN/sup && \
+    curl https://raw.githubusercontent.com/gwaysys/supd/v1/bin/sup -o $GOBIN/sup && \
     chmod +x $GOBIN/sup&&echo "Download sup done."|| exit 0
 fi
 
