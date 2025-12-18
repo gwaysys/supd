@@ -9,6 +9,10 @@ git clone https://github.com/gwaysys/supd.git
 cd supd
 ./publish.sh
 ./setup.sh install # ./setup.sh clean # to remove install
+
+# or 
+cd publish/supd
+./setup.sh install
 ```
 
 ## Install from binary
