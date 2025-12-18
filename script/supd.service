@@ -4,9 +4,9 @@ Documentation=https://github.com/gwaysys/supd
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/supd -c /etc/supd/supd.ini
-ExecStop=/usr/bin/supd ctl shutdown
-ExecReload=/usr/bin/bin/supd ctl reload
+ExecStart=/usr/local/bin/supd -c /etc/supd/supd.ini
+ExecStop=/usr/local/bin/supd ctl shutdown
+ExecReload=/usr/local/bin/supd ctl reload
 KillMode=process
 Restart=on-failure
 RestartSec=50s

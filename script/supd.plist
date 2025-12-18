@@ -10,12 +10,12 @@
 
 	<key>ProgramArguments</key>
 	<array>
-        <string>/usr/bin/supd</string>
+        <string>/usr/local/bin/supd</string>
         <string>-c</string>
         <string>/etc/supd/supd.ini</string>
 	</array>
 
 	<key>WorkingDirectory</key>
-    <string>/usr/bin</string>
+    <string>/usr/local/bin</string>
 </dict>
 </plist>
