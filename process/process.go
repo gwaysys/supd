@@ -15,11 +15,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gwaylib/errors"
 	"github.com/gwaysys/supd/config"
 	"github.com/gwaysys/supd/events"
 	"github.com/gwaysys/supd/logger"
 	"github.com/gwaysys/supd/signals"
-	"github.com/gwaylib/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -100,7 +100,8 @@ func (p *Process) SetConfig(entry *config.ConfigEntry) {
 
 // start the process
 // Args:
-//  wait - true, wait the program started or failed
+//
+//	wait - true, wait the program started or failed
 func (p *Process) Start(wait bool) {
 	log.WithFields(log.Fields{"program": p.GetName()}).Info("try to start program")
 	p.lock.Lock()
@@ -351,7 +352,6 @@ func (p *Process) getExitCodes() []int {
 }
 
 // check if the process is running or not
-//
 func (p *Process) isRunning() bool {
 	if p.cmd != nil && p.cmd.ProcessState != nil {
 		if runtime.GOOS == "windows" {
@@ -416,13 +416,12 @@ func (p *Process) waitForExit(startSecs int64) {
 
 // fail to start the program
 func (p *Process) failToStartProgram(reason string, finishCb func(int), code int) {
-	log.WithFields(log.Fields{"program": p.GetName()}).Errorf(reason)
+	log.WithFields(log.Fields{"program": p.GetName()}).Error(reason, err)
 	p.changeStateTo(FATAL)
 	finishCb(code)
 }
 
 // monitor if the program is in running before endTime
-//
 func (p *Process) monitorProgramIsRunning(endTime time.Time, monitorExited *int32, programExited *int32) {
 	// if time is not expired
 	for time.Now().Before(endTime) && atomic.LoadInt32(programExited) == 0 {
@@ -477,7 +476,7 @@ func (p *Process) run(finishCb func(code int)) {
 
 		err := p.createProgramCommand()
 		if err != nil {
-			p.failToStartProgram("fail to create program", finishCbWrapper, -1)
+			p.failToStartProgram(fmt.Sprintf("fail to create program, error:%v", errors.As(err)), finishCbWrapper, -1)
 			break
 		}
 
@@ -485,7 +484,7 @@ func (p *Process) run(finishCb func(code int)) {
 
 		if err != nil {
 			if atomic.LoadInt32(p.retryTimes) >= p.getStartRetries() {
-				p.failToStartProgram(fmt.Sprintf("fail to start program with error:%v", errors.As(err)), finishCbWrapper, -1)
+				p.failToStartProgram(fmt.Sprintf("fail to start program, error:%v", errors.As(err)), finishCbWrapper, -1)
 				break
 			} else {
 				log.WithFields(log.Fields{"program": p.GetName()}).Info("fail to start program with error:", errors.As(err))
@@ -581,9 +580,9 @@ func (p *Process) changeStateTo(procState ProcessState) {
 // send signal to the process
 //
 // Args:
-//   sig - the signal to the process
-//   sigChildren - true: send the signal to the process and its children proess
 //
+//	sig - the signal to the process
+//	sigChildren - true: send the signal to the process and its children proess
 func (p *Process) Signal(sig os.Signal, sigChildren bool) error {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
@@ -594,9 +593,9 @@ func (p *Process) Signal(sig os.Signal, sigChildren bool) error {
 // send signal to the process
 //
 // Args:
-//    sig - the signal to be sent
-//    sigChildren - true if the signal also need to be sent to children process
 //
+//	sig - the signal to be sent
+//	sigChildren - true if the signal also need to be sent to children process
 func (p *Process) sendSignal(sig os.Signal, sigChildren bool) error {
 	if p.cmd != nil && p.cmd.Process != nil {
 		err := signals.Kill(p.cmd.Process, sig, sigChildren)
@@ -775,7 +774,7 @@ func (p *Process) setUser() error {
 	return nil
 }
 
-//send signal to process to stop it
+// send signal to process to stop it
 func (p *Process) Stop(wait bool) {
 	p.lock.Lock()
 	p.stopByUser = true
