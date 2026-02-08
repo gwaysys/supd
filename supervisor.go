@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gwaylib/errors"
 	"github.com/gwaysys/supd/config"
 	"github.com/gwaysys/supd/events"
 	"github.com/gwaysys/supd/faults"
@@ -17,7 +18,6 @@ import (
 	"github.com/gwaysys/supd/signals"
 	"github.com/gwaysys/supd/types"
 	"github.com/gwaysys/supd/util"
-	"github.com/gwaylib/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -123,9 +123,10 @@ func (s *Supervisor) GetState(args *struct{}, reply *struct{ StateInfo StateInfo
 // Get all the name of prorams
 //
 // Return the name of all the programs
-// func (s *Supervisor) GetPrograms() []string {
-// 	return s.config.GetProgramNames()
-// }
+//
+//	func (s *Supervisor) GetPrograms() []string {
+//		return s.config.GetProgramNames()
+//	}
 func (s *Supervisor) GetPID(args *struct{}, reply *struct{ Pid int }) error {
 	reply.Pid = os.Getpid()
 	return nil
@@ -487,8 +488,6 @@ func (s *Supervisor) SendRemoteCommEvent(args *RemoteCommEvent, reply *rpcclient
 }
 
 // return err, addedGroup, changedGroup, removedGroup
-//
-//
 func (s *Supervisor) reload() (error, []string, []string, []string) {
 	//get the previous loaded programs
 	prevProgGroup := s.config.ProgramGroup.Clone()
@@ -501,13 +500,14 @@ func (s *Supervisor) reload() (error, []string, []string, []string) {
 
 	loadedProgramNames, err := s.config.Load()
 	if err != nil {
-		log.Warn(errors.As(err))
 		return errors.As(err), nil, nil, nil
 	}
 
 	s.setSupervisordInfo()
 	s.startEventListeners()
-	s.startHttpServer()
+	if err := s.startHttpServer(); err != nil {
+		return errors.As(err), nil, nil, nil
+	}
 
 	// checking remove
 	removedPrograms := util.Sub(prevProgramNames, loadedProgramNames)
@@ -609,7 +609,7 @@ func (s *Supervisor) startEventListeners() {
 	}
 }
 
-func (s *Supervisor) startHttpServer() {
+func (s *Supervisor) startHttpServer() error {
 	httpServerConfig, ok := s.config.GetInetHttpServer()
 	s.rpcServer.Stop()
 	if ok {
@@ -621,12 +621,23 @@ func (s *Supervisor) startHttpServer() {
 
 	httpServerConfig, ok = s.config.GetUnixHttpServer()
 	if ok {
+		username := httpServerConfig.GetString("username", "")
+		password := httpServerConfig.GetString("password", "")
 		env := config.NewStringExpression("here", s.config.GetConfigFileDir())
 		sockFile, err := env.Eval(httpServerConfig.GetString("file", "/tmp/supervisord.sock"))
-		if err == nil {
-			go s.rpcServer.StartUnixHttpServer(httpServerConfig.GetString("username", ""), httpServerConfig.GetString("password", ""), sockFile)
+		if err != nil {
+			return errors.As(err)
+		} else {
+			// checking is alive
+			c := rpcclient.NewRPCClient("unix://"+sockFile, username, password, false)
+			ver, err := c.GetVersion()
+			if err == nil {
+				return errors.New("already running").As(ver)
+			}
+			go s.rpcServer.StartUnixHttpServer(username, password, sockFile)
 		}
 	}
+	return nil
 }
 
 func (s *Supervisor) setSupervisordInfo() {

@@ -416,7 +416,7 @@ func (p *Process) waitForExit(startSecs int64) {
 
 // fail to start the program
 func (p *Process) failToStartProgram(reason string, finishCb func(int), code int) {
-	log.WithFields(log.Fields{"program": p.GetName()}).Error(reason, err)
+	log.WithFields(log.Fields{"program": p.GetName()}).Error(reason)
 	p.changeStateTo(FATAL)
 	finishCb(code)
 }
