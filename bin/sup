@@ -4,8 +4,6 @@
 sup_ver="v4.1"
 sup_mode="src" # src for source building，app for published.
 
-export GOPROXY=https://goproxy.io # GOPROXY ON
-
 # Checking depend
 if [ -z "$PRJ_NAME" ]; then
     echo "\$PRJ_NAME NOT FOUND"
@@ -372,11 +370,7 @@ reCmd(){
     args="$2 $3 $4 $5 $6 $7 $8"
     
     case "$2" in
-        "all"|"all-noproxy")
-            if [ "$2" = "all-noproxy" ] ; then
-                export GOPROXY="" # using no goproxy
-            fi
-
+        "all")
             if [ -z "$BUILD_ALL_PATH" ]; then
                 buildp=$PRJ_ROOT
             else
@@ -470,17 +464,12 @@ case "$1" in
        echo "此脚本依赖于go mod、supd来管理项目，以下常用管理指令，指令之外的请使用源程序指令构建补充"
        echo ""
        echo "以下是编译(已不建议，建议使用Makefile)使用的指令："
-       echo "sup get # 使用GOPROXY下载当前目录下的go get依赖, 相当于GOPROXY=\"\" && go get -v"
-       echo "sup get all # 使用GOPROXY依次下载env.sh的\$BUILD_ALL_PATH路径下的go get依赖"
-       echo "sup get all-noproxy # 关闭GOPROXY依次下载env.sh的\$BUILD_ALL_PATH路径下的go get依赖"
-       echo "sup update # 使用GOPROXY更新当前目录下的go get依赖，相当于GORPOXY=\"\" && go get -v -u"
-       echo "sup update all # 使用GOPROXY使用最新的库编译env.sh的\$BUILD_ALL_PATH路径下的程序"
-       echo "sup update all-noproxy # 关闭GOPROXY，使用最新的库编译env.sh的\$BUILD_ALL_PATH路径下的程序"
-       echo "sup build # 使用GOPROXY, go build当前目录的main程序, 支持参数扩展"
-       echo "sup build all # 依次编译env.sh的\$BUILD_ALL_PATH路径下的程序, 使用GOPROXY进行go build"
-       echo "sup build all-noporxy # 依次编译env.sh的\$BUILD_ALL_PATH路径下的程序,关闭GOPROXY进行go build"
-       echo ""
-       echo "以下是管理依赖(已不建议，建议使用Makefile)的指令"
+       echo "sup get # 下载当前目录下的go get依赖"
+       echo "sup get all # 依次下载env.sh的\$BUILD_ALL_PATH路径下的go get依赖"
+       echo "sup update # 更新当前目录下的go get依赖"
+       echo "sup update all # 使用最新的库编译env.sh的\$BUILD_ALL_PATH路径下的程序"
+       echo "sup build # go build当前目录的main程序, 支持参数扩展"
+       echo "sup build all # 依次编译env.sh的\$BUILD_ALL_PATH路径下的程序, 进行go build"
        echo "sup mod # 下载依赖或初始化依赖，若未初始化过，则执行初始化工作，同go mod"
        echo ""
        echo "以下是部署使用的指令(TODO:将只支持部署指令，不再支持编译指令)："
