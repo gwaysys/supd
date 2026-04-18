@@ -33,6 +33,10 @@ export INSTALL_ALL_PATH="" # for running, using $BUILD_ALL_PATH when not set
 # export BUILD_LDFLAGS="" # Extend go build flag in sup build
 export PUB_ROOT_RES="etc script setup.sh" # The folders that need to be packaged in the root directory, such as "etc", using default is not set
 # export PUB_APP_RES="public" # The folders under the app, such as "public", using default is not set
+#
+
+# Set common args for program ran
+# APP_ARGS="serve --etc-root=$PRJ_ROOT" # sup start with args when \$APP_ARGS is set
 
 # Changing the path can change the version number of the compiler. If not specified, the system's default configuration will be used
 go_root="/usr/local/go"

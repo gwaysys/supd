@@ -266,6 +266,11 @@ installApp() {
         echo '#' "Not found '$cfg_name' binary command, need build at first"
         return 1
     fi
+
+    run_cmd="$pwd_dir/$app_name $APP_ARGS"
+    if [ -n "$1" ]; then
+        run_cmd="$pwd_dir/$app_name $1 $2 $3 $4 $5 $6 $7 $8"
+    fi
     
     echo '#' "Installing ($cfg_name)"
     # Set the environment variables for supd
@@ -273,14 +278,14 @@ installApp() {
     sudo sh -c "echo "user=$sup_user" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "environment="$sup_app_env"" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "directory=$pwd_dir" >> $sup_etc_dir/$cfg_name.$cfg_end"
-    sudo sh -c "echo "command="$pwd_dir/$app_name $1 $2 $3 $4 $5 $6 $7 $8"" >> $sup_etc_dir/$cfg_name.$cfg_end"
+    sudo sh -c "echo "command="$run_cmd"" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "autostart=true" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "autorestart=true" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "startsecs=3" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "startretries=3" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "exitcodes=0,2" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "stopsignal=TERM" >> $sup_etc_dir/$cfg_name.$cfg_end"
-    sudo sh -c "echo "stopwaitsecs=10" >> $sup_etc_dir/$cfg_name.$cfg_end"
+    sudo sh -c "echo "stopwaitsecs=30" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "stdout_logfile=$sup_log_dir/$cfg_name.logfile.stdout" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "stdout_logfile_maxbytes=$sup_log_size" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "stdout_logfile_backups=$sup_log_bak" >> $sup_etc_dir/$cfg_name.$cfg_end"
@@ -375,7 +380,7 @@ reCmd() {
             buildp=$BUILD_ALL_PATH
         fi
         case "$1" in 
-            "start", "stop", "restart", "install")
+            "start"|"stop"|"restart"|"install"|clean)
                 if [ -n "INSTALL_ALL_PATH" ]; then
                     buildp=$INSTALL_ALL_PATH
                 fi
@@ -470,14 +475,14 @@ case "$1" in
        echo "sup get all # Download the go get dependencies in the \$BUILD_ALL_PATH path in 'env.sh' set"
        echo "sup update # Update to the latest lib the go get dependencies in the current directory"
        echo "sup update all # Update all path with \$BUILD_ALL_PATH in 'env.sh' set"
-       echo "sup build # do go build in the current directory with "
-       echo "sup build all # 依次编译env.sh的\$BUILD_ALL_PATH路径下的程序, 进行go build"
-       echo "sup mod # 下载依赖或初始化依赖，若未初始化过，则执行初始化工作，同go mod"
+       echo "sup build # do go build in the current directory with \$BUILD_LDFLAGS"
+       echo "sup build all # do go build in \$BUILD_ALL_PATH set"
+       echo "sup mod # like 'go mod'"
        echo ""
-       echo "以下是部署使用的指令(TODO:将只支持部署指令，不再支持编译指令)："
-       echo "sup status # Running status of the current deployment"
-       echo "sup install [app_args] # Deploy the program of current directoryto supd. If parameters are required at run time, please fill in the args."
-       echo "sup install all # Installing all the \$BUILD_ALL_PATH program to supd"
+       echo "Deployment commands："
+       echo "sup status # Running status of current deployment"
+       echo "sup install [app_args] # Deploy the current directory program to supd. app_args for when running exec command args, it will replace \$APP_ARGS"
+       echo "sup install all # Installing all the \$BUILD_ALL_PATH programs to supd with \$APP_ARGS."
        echo "sup clean # Remove the installed program of current directory."
        echo "sup clean all # Remove the installed programs of \$BUILD_ALL_PATH"
        echo "sup publish # Call publish.sh of the current directory if it exists, copy program and \$PUB_APP_RES to publish directory"
@@ -493,7 +498,7 @@ case "$1" in
        echo "sup taile [\$cfg_name stderr] # Tail stderr of the [application] status not 0, which is equivalent to 'supd ctl tail \$cfg_name stderr'"
        echo "sup tailef [\$cfg_name stderr] # Tail and follow the stderr of the [application] status not 0, which is equivalent to 'supd ctl tail -f \$cfg_name stderr'"
        echo ""
-       echo "Description of configurable environment variables"
+       echo "Environment variables(can set in env.sh or others)"
        echo "\$PRJ_NAME # Project name, which is used to create script data when creating deployment."
        echo "\$PRJ_ROOT # Project path, which indicates the root directory where the current project is running."
        echo ""
@@ -503,6 +508,8 @@ case "$1" in
        echo ""
        echo "\$PUB_ROOT_RES # The resource folder name of the project root directory collected during publishing. If it is not filled in, it will be the default: etc"
        echo "\$PUB_APP_RES # The resource folder name in the current directory is applied when publishing. If it is not filled in, it defaults to: res public"
+       echo ""
+       echo "\$APP_ARGS # Env for run program with args"
        echo ""
        echo "\$SUP_USER # user of running supd configuration"
        echo "\$SUP_ETC_DIR # The supd etc directory when installing the supd configuration file. If it is not filled in, it defaults to: /etc/supd/conf.d"

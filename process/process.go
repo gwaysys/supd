@@ -790,6 +790,7 @@ func (p *Process) Stop(wait bool) {
 
 	done := make(chan bool, 1)
 	go func() {
+	loop1:
 		for i := 0; i < len(sigs); i++ {
 			// send signal to process
 			sig, err := signals.ToSignal(sigs[i])
@@ -799,16 +800,24 @@ func (p *Process) Stop(wait bool) {
 			}
 			log.WithFields(log.Fields{"program": p.GetName(), "signal": sigs[i]}).Info("send stop signal to program")
 			p.Signal(sig, stopasgroup)
-
 			//wait at most "stopwaitsecs" seconds for one signal
-			<-time.After(waitsecs)
-			//if it already exits
-			if p.state != STARTING && p.state != RUNNING && p.state != STOPPING {
-				done <- true
-				return
+			timeout := time.After(waitsecs)
+			for {
+				select {
+				case <-timeout:
+					continue loop1
+				default:
+					time.Sleep(1 * time.Second) // wait 1 second for checking
+					if p.state != STARTING && p.state != RUNNING && p.state != STOPPING {
+						done <- true
+						return
+					}
+				}
 			}
-			time.Sleep(1 * time.Second) // force to wait 1 second
 		}
+
+		// no signal is valid, exit wait
+		done <- true
 	}()
 	if wait {
 		<-done
