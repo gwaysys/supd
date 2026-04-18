@@ -23,19 +23,16 @@ case "$1" in
         cd script
         ./${bootName} install
         cd ..
-        echo "Install supd done"
         ;;
     "upgrade")
         cd script
         ./${bootName} upgrade
         cd ..
-        echo "Upgrade supd done"
         ;;
     "clean")
         cd script
         ./${bootName} clean
         cd ..
-        echo "Clean supd done"
         ;;
     *)
         echo "install -- install to system."

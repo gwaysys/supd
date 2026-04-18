@@ -36,7 +36,7 @@ export PUB_ROOT_RES="etc script setup.sh" # The folders that need to be packaged
 #
 
 # Set common args for program ran
-# APP_ARGS="serve --etc-root=$PRJ_ROOT" # sup start with args when \$APP_ARGS is set
+# export APP_ARGS="serve --etc-root=$PRJ_ROOT" # sup start with args when \$APP_ARGS is set
 
 # Changing the path can change the version number of the compiler. If not specified, the system's default configuration will be used
 go_root="/usr/local/go"
