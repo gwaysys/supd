@@ -788,43 +788,30 @@ func (p *Process) Stop(wait bool) {
 		log.WithFields(log.Fields{"program": p.GetName()}).Error("Cannot set stopasgroup=true and killasgroup=false")
 	}
 
+	done := make(chan bool, 1)
 	go func() {
-		stopped := false
-		for i := 0; i < len(sigs) && !stopped; i++ {
+		for i := 0; i < len(sigs); i++ {
 			// send signal to process
 			sig, err := signals.ToSignal(sigs[i])
 			if err != nil {
+				log.WithFields(log.Fields{"program": p.GetName(), "signal": sigs[i]}).Info("error stop signal to program")
 				continue
 			}
 			log.WithFields(log.Fields{"program": p.GetName(), "signal": sigs[i]}).Info("send stop signal to program")
 			p.Signal(sig, stopasgroup)
-			endTime := time.Now().Add(waitsecs)
+
 			//wait at most "stopwaitsecs" seconds for one signal
-			for endTime.After(time.Now()) {
-				//if it already exits
-				if p.state != STARTING && p.state != RUNNING && p.state != STOPPING {
-					stopped = true
-					break
-				}
-				time.Sleep(1 * time.Second)
+			<-time.After(waitsecs)
+			//if it already exits
+			if p.state != STARTING && p.state != RUNNING && p.state != STOPPING {
+				done <- true
+				return
 			}
-		}
-		if !stopped {
-			log.WithFields(log.Fields{"program": p.GetName()}).Info("force to kill the program")
-			p.Signal(syscall.SIGKILL, killasgroup)
+			time.Sleep(1 * time.Second) // force to wait 1 second
 		}
 	}()
 	if wait {
-		for {
-			// if the program exits
-			p.lock.RLock()
-			if p.state != STARTING && p.state != RUNNING && p.state != STOPPING {
-				p.lock.RUnlock()
-				break
-			}
-			p.lock.RUnlock()
-			time.Sleep(1 * time.Second)
-		}
+		<-done
 	}
 }
 
