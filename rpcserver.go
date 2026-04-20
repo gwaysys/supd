@@ -8,11 +8,12 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/gwaycc/supd/rpcclient"
 	"github.com/gwaylib/errors"
+	"github.com/gwaysys/supd/rpcclient"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -109,7 +110,11 @@ func (p *RPCServer) Stop() {
 }
 
 func (p *RPCServer) StartUnixHttpServer(user string, password string, listenAddr string) {
-	os.Remove(listenAddr)
+	if err := os.MkdirAll(filepath.Dir(listenAddr), 0755); err != nil {
+		log.Warn(errors.As(err))
+		return
+	}
+	os.Remove(listenAddr) // TODO: more running check for this
 	p.startHttpServer(user, password, "unix", listenAddr)
 }
 

@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"unicode"
 
-	"github.com/gwaycc/supd/logger"
+	"github.com/gwaysys/supd/logger"
 
 	"github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
@@ -93,10 +93,10 @@ func LoadEnvFile() {
 // 5. ../etc/supervisord.conf (Relative to the executable)
 // 6. ../supervisord.conf (Relative to the executable)
 func findSupervisordConf() (string, error) {
-	possibleSupervisordConf := []string{options.Configuration,
-		os.ExpandEnv("$PRJ_ROOT/etc/supd/supd.ini"),
-		// keep for old
+	possibleSupervisordConf := []string{
+		options.Configuration,
 		"./supd.ini",
+		"./etc/supd.ini",
 		"/etc/supd/supd.ini",
 		"../etc/supd/supd.ini",
 		"../supd.ini",

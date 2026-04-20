@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/gwaycc/supd/config"
+	"github.com/gwaysys/supd/config"
 
 	"github.com/gwaylib/errors"
 )

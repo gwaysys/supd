@@ -1,64 +1,66 @@
 #!/bin/bash
 
-# Template from https://github.com/gwaycc/goapp
+# Template from https://github.com/gwaysys/goapp
 
-# 项目需要导出的程序环境变量
+# The program environment variables that need to be exported for the project
 # -------------------------------------------------
 export PRJ_ROOT=`pwd`
 export PRJ_NAME="supd"
 export GOBIN=$PRJ_ROOT/bin
 export GO111MODULE=on
 
-# 设定sup [command] all 所遍历的目录
-export BUILD_ALL_PATH="cmd/supd"
+# Set the sup [command] all directories to be traversed
+export BUILD_ALL_PATH="cmd/supd" # for build
+export INSTALL_ALL_PATH="" # for running, using $BUILD_ALL_PATH when not set
 
-# supervisord配置文件参数
+# Supervisord configuration file parameters
 ## --------------------START-------------------
-## 以下是部署时的supervisor默认配置数据，若未配置时，会使用以下默认数据
-## 开发IDE可不配置以下环境变量
-## 配置supervisor运行的用户，默认为当前用户
+## The following is the default configuration data for the supervisor during deployment. If not configured, the following default data will be used
+## Configure the user for running the supervisor, default is the current user
 #export SUP_USER=$USER
-## 配置supervisor的配置文件目录
-#export SUP_ETC_DIR="/etc/supervisor/conf.d/" # (可选)
-## 配置supervisor的子程序日志的单个文件最大大小
+## Configure the directory of the supervisor's configuration files
+#export SUP_ETC_DIR="/etc/supervisor/conf.d/"
+## The maximum size of a single file for configuring the subroutine log of the supervisor
 #export SUP_LOG_SIZE="10MB"
-## 配置supervisor的子程序日志的最多文件个数
+## The maximum number of files for configuring the subroutine log of the supervisor
 #export SUP_LOG_BAK="10"
-## 配置supervisor配置中的environment环境变量
+## Configure the environment variable in the supervisor configuration
 #export SUP_APP_ENV="PRJ_ROOT=\\\"$PRJ_ROOT\\\",GIN_MODE=\\\"release\\\",LD_LIBRARY_PATH=\\\"$LD_LIBRARY_PATH\\\""
 
-# 设定publish指令打包时需要包含的文件夹环境变量
+# Set the folder environment variables that need to be included when packaging the publish command
 # -------------------------------------------------
-# 默认会打包以下目录：$PRJ_ROOT/bin/* $BUILD_ALL_PATH等二进制程序
-export PUB_ROOT_RES="etc script setup.sh" # 根目录下需要打包的文件夹列表，如"etc"等, 空格字符串表示不使用
-# export PUB_APP_RES="public" # app下的文件夹列表，如"res public"等, 空格字符串表示不使用
+# export BUILD_GIT_COMMIT="github.com/gwaysys/supd/version.GitCommit" # it will be set when go build ldflags if set
+# export BUILD_LDFLAGS="" # Extend go build flag in sup build
+export PUB_ROOT_RES="etc script setup.sh" # The folders that need to be packaged in the root directory, such as "etc", using default is not set
+# export PUB_APP_RES="public" # The folders under the app, such as "public", using default is not set
+#
 
-# 更改路径可更改编译器的版本号, 如果未指定，使用系统默认的配置
+# Set common args for program ran
+# export APP_ARGS="serve --etc-root=$PRJ_ROOT" # sup start with args when \$APP_ARGS is set
+
+# Changing the path can change the version number of the compiler. If not specified, the system's default configuration will be used
 go_root="/usr/local/go"
 if [ -d "$go_root" ]; then
     export GOROOT="$go_root"
 fi
 
-# 将GOBIN加入PATH
+# Add GOBIN to PATH
 bin_path=$GOBIN:$GOROOT/bin:
 
 rep=${PATH/bin_path/""}
 if [ ! "$PATH" = "$rep" ]; then
-    PATH=$rep # 重新设定原值的位置
+    PATH=$rep # Reset the position of the original value
 fi
 export PATH=$bin_path$PATH
 
-# 下载sup管理工具
+# Download the sup management tool
 if [ ! -f $GOBIN/sup ]; then
     type curl >/dev/null 2>&1||{ echo -e >&2 "curl not found, need install at first."; exit 0; }
     echo "Download sup to bin."
     mkdir -p $GOBIN&& \
-    curl https://raw.githubusercontent.com/gwaycc/supd/v1/bin/sup -o $GOBIN/sup && \
+    curl https://raw.githubusercontent.com/gwaysys/supd/v1/bin/sup -o $GOBIN/sup && \
     chmod +x $GOBIN/sup&&echo "Download sup done."|| exit 0
 fi
-
-# 设定git库地址转换, 以便解决私有库中https证书不可信的问题
-# git config --global url."git@git.gway.cc:".insteadOf "https://git.gway.cc"
 # --------------------END--------------------
 
 echo "Env have changed to \"$PRJ_NAME\""

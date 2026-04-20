@@ -17,7 +17,8 @@ case "$1" in
     "upgrade")
         if [ -f "$srvHome/supd.service" ]; then
             sudo ./install_bin.sh upgrade
-            sudo systemctl restart supd
+            echo "Upgrade bin done, need do 'systemctl restart supd' by manually."
+            #sudo systemctl restart supd
         else
             echo "Not installed"
         fi

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gwaycc/supd/config"
+	"github.com/gwaysys/supd/config"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -1,10 +1,8 @@
 #!/bin/sh
 
 # sup version
-sup_ver="v4"
-sup_mode="src" # src for source building，app for published.
-
-export GOPROXY=https://goproxy.io # GOPROXY ON
+sup_ver="v4.2"
+sup_mode="src" # src for building，app for published, it will be auto set by sup.
 
 # Checking depend
 if [ -z "$PRJ_NAME" ]; then
@@ -23,7 +21,7 @@ app_path=""
 cfg_name=""
 cfg_end="ini"
 
-resetCfgName(){
+resetCfgName() {
     pwd_dir="`pwd`"
     if [ ${#1} -gt 0 ]; then
         pwd_dir="$1"
@@ -98,12 +96,12 @@ if [ -n "$SUP_APP_ENV" ] ; then
 fi
 
 # call supevisorctl
-callSup(){
-    type supd >/dev/null 2>&1||{ echo >&2 "Aborted. \nRequire 'supd' but it's not found. \nGet supd from: https://github.com/gwaycc/supd/releases"; exit 0; }
+callSup() {
+    type supd >/dev/null 2>&1||{ echo >&2 "Aborted. \nRequire 'supd' but it's not found. \nGet supd from: https://github.com/gwaysys/supd/releases"; exit 0; }
     sudo supd ctl $*
 }
 
-startApp(){
+startApp() {
     resetCfgName
     if [ $# -gt 0 ]; then
         callSup start $1 $2 $3 $4 $5 $6 $7 $8
@@ -112,7 +110,7 @@ startApp(){
     fi
 }
 
-restartApp(){
+restartApp() {
     resetCfgName
     if [ $# -gt 0 ]; then
            callSup restart $1 $2 $3 $4 $5 $6 $7 $8
@@ -121,7 +119,7 @@ restartApp(){
      fi
 }
 
-stopApp(){
+stopApp() {
     resetCfgName
     if [ $# -gt 0 ]; then
            callSup stop $1 $2 $3 $4 $5 $6 $7 $8
@@ -130,7 +128,7 @@ stopApp(){
     fi
 }
 
-tailApp(){
+tailApp() {
     resetCfgName
     appName=$1
     if [ -z "$1" ]; then
@@ -143,7 +141,7 @@ tailApp(){
     callSup tail $appName $end
 }
 
-tailfApp(){
+tailfApp() {
     resetCfgName
     appName=$1
     if [ -z "$1" ]; then
@@ -156,7 +154,25 @@ tailfApp(){
     callSup tail -f $appName $end
 }
 
-supStatus(){
+taileApp() {
+    resetCfgName
+    appName=$1
+    if [ -z "$1" ]; then
+        appName=$cfg_name
+    fi
+    callSup tail $appName stderr
+}
+
+tailefApp() {
+    resetCfgName
+    appName=$1
+    if [ -z "$1" ]; then
+        appName=$cfg_name
+    fi
+    callSup tail -f $appName stderr
+}
+
+supStatus() {
     echo "======================================================="
     echo "Using sup to manage process"
     echo "======================================================="
@@ -164,17 +180,31 @@ supStatus(){
     echo "======================================================="
 }
 
-goBuild(){
+goBuild() {
+    ldflags=$BUILD_LDFLAGS
+    if [ ! -z "$BUILD_GIT_COMMIT" ]; then
+        commit=$(git describe --always --match=NeVeRmAtCh --dirty 2>/dev/null)
+        if [ ! -z "$commit" ]; then
+            if [ -z "$ldflags" ]; then
+                ldflags="-ldflags -X=$BUILD_GIT_COMMIT=$commit "
+            else
+                ldflags="-ldflags -X=$BUILD_GIT_COMMIT=$commit "$ldflags
+            fi
+        else
+            echo "Found BUILD_GIT_COMMIT enviroment, but git describe is unavailable"
+        fi
+    fi
+
     # go build
     if [ $# -gt 0 ]; then
-        go build $1 $2 $3 $4 $5 $6 $7 $8 || exit 0
+        go build $ldflags $@ || exit 0
     else
         echo '#' "Building ($cfg_name)"
-        go build || exit 0
+        go build $ldflags || exit 0
     fi
 }
 
-goGet(){
+goGet() {
     # go get package
     if [ $# -gt 0 ]; then
         go get -insecure -d -v $1 $2 $3 $4 $5 $6 $7 $8 || exit 0
@@ -184,7 +214,7 @@ goGet(){
     fi
 }
 
-goUpdate(){
+goUpdate() {
     # go get -u package
     if [ $# -gt 0 ]; then
         go get -insecure -d -v -u $1 $2 $3 $4 $5 $6 $7 $8 || exit 0
@@ -203,20 +233,20 @@ buildApp() {
 
 
 # Go mod
-modApp(){
+modApp() {
     resetCfgName
     echo '#' "Doing go mod ($cfg_name) $1 $2 $3 $4 $5 $6 $7 $8"
     go mod $*
 }
 
 # Go get
-getApp(){
+getApp() {
     resetCfgName
     goGet $*
 }
 
 # Go get -u
-updateApp(){
+updateApp() {
     resetCfgName
     goUpdate $*
 }
@@ -236,22 +266,26 @@ installApp() {
         echo '#' "Not found '$cfg_name' binary command, need build at first"
         return 1
     fi
+
+    run_cmd="$pwd_dir/$app_name $APP_ARGS"
+    if [ -n "$1" ]; then
+        run_cmd="$pwd_dir/$app_name $1 $2 $3 $4 $5 $6 $7 $8"
+    fi
     
     echo '#' "Installing ($cfg_name)"
-    # 设定supd的环境变量
+    # Set the environment variables for supd
     sudo sh -c "echo "[program:$cfg_name]" > $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "user=$sup_user" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "environment="$sup_app_env"" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "directory=$pwd_dir" >> $sup_etc_dir/$cfg_name.$cfg_end"
-    sudo sh -c "echo "command="$pwd_dir/$app_name $1 $2 $3 $4 $5 $6 $7 $8"" >> $sup_etc_dir/$cfg_name.$cfg_end"
+    sudo sh -c "echo "command="$run_cmd"" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "autostart=true" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "autorestart=true" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "startsecs=3" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "startretries=3" >> $sup_etc_dir/$cfg_name.$cfg_end"
-    sudo sh -c "echo "autorestart=true" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "exitcodes=0,2" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "stopsignal=TERM" >> $sup_etc_dir/$cfg_name.$cfg_end"
-    sudo sh -c "echo "stopwaitsecs=10" >> $sup_etc_dir/$cfg_name.$cfg_end"
+    sudo sh -c "echo "stopwaitsecs=30" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "stdout_logfile=$sup_log_dir/$cfg_name.logfile.stdout" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "stdout_logfile_maxbytes=$sup_log_size" >> $sup_etc_dir/$cfg_name.$cfg_end"
     sudo sh -c "echo "stdout_logfile_backups=$sup_log_bak" >> $sup_etc_dir/$cfg_name.$cfg_end"
@@ -263,7 +297,7 @@ installApp() {
 }
 
 # Removing program from supd
-cleanApp(){
+cleanApp() {
     resetCfgName
 
     echo '#' "Cleaning (${cfg_name})"
@@ -277,7 +311,7 @@ cleanApp(){
 }
 
 # Packaging binary mode.
-publishApp(){
+publishApp() {
     resetCfgName
     echo '#' "Publishing $cfg_name to $pub_dir"
     if [ -f "./publish.sh" ]; then
@@ -289,6 +323,9 @@ publishApp(){
     # Collecting resource
     for d in $pub_app_res
     do
+        if [ -z "$d" ]; then
+            continue
+        fi
         if [ -d $pwd_dir/$d ]; then
             mkdir -p $pub_dir/$app_path||exit 0
             cp -rf $pwd_dir/$d $pub_dir/$app_path||exit 0
@@ -318,6 +355,9 @@ publishApp(){
     # Collection root resource
     for d in $pub_root_res
     do
+        if [ -z "$d" ]; then
+            continue
+        fi
         if [ -d $PRJ_ROOT/$d ]; then
             mkdir -p $pub_dir/$d||exit 0
             cp -rf $PRJ_ROOT/$d $pub_dir/||exit 0
@@ -328,32 +368,39 @@ publishApp(){
     done
 }
 
-reCmd(){
+reCmd() {
     # backup current directory.
     currdir=`pwd`
     buildp=$currdir
     args="$2 $3 $4 $5 $6 $7 $8"
     
-    case "$2" in
-        "all"|"all-noproxy")
-            if [ "$2" = "all-noproxy" ] ; then
-                export GOPROXY="" # using no goproxy
-            fi
-
+    if [ "$2" = "all" ]; then
+        buildp=$PRJ_ROOT
+        if [ -n "$BUILD_ALL_PATH" ]; then
             buildp=$BUILD_ALL_PATH
-            # Spec for publish
-            if [ "$1" = "publish" ]; then
-                rm -rf $pub_dir||exit 0
-            fi
-            # rebuild args
-            args="$3 $4 $5 $6 $7 $8"
+        fi
+        case "$1" in 
+            "start"|"stop"|"restart"|"install"|clean)
+                if [ -n "$INSTALL_ALL_PATH" ]; then
+                    buildp=$INSTALL_ALL_PATH
+                fi
             ;;
-    esac
+            "publish")
+                # Spec for publish
+                rm -rf $pub_dir||exit 0
+            ;;
+        esac
+        # rebuild args
+        args="$3 $4 $5 $6 $7 $8"
+    fi
     
-    for a in $buildp
+    for p in $buildp
     do
-        if [ -d $a ]; then
-            cd $a
+        if [ -z "$p" ]; then
+            continue
+        fi
+        if [ -d $p ]; then
+            cd $p
             case "$1" in
                  "start")
                          startApp $args
@@ -370,6 +417,13 @@ reCmd(){
                  "tailf")
                          tailfApp $args
                          ;;
+                 "taile")
+                         taileApp $args
+                         ;;
+                 "tailef")
+                         tailefApp $args
+                         ;;
+
                  "build")
                          buildApp $args
                          ;;
@@ -394,14 +448,12 @@ reCmd(){
             esac
         fi
     done
-    
     cd $currdir
 }
 
-
 # shell参数入口
 case "$1" in 
-    "start"|"stop"|"restart"|"tail"|"tailf"|"install"|"clean")
+    "start"|"stop"|"restart"|"tail"|"tailf"|"taile"|"tailef"|"install"|"clean")
         reCmd $*
         exit 0
     ;;
@@ -415,51 +467,54 @@ case "$1" in
     ;;
 
     ""|"help")
-        # TODO:英文化
-       echo "此脚本集成go mod、supd来管理项目，以下常用管理指令，以下指令之外的请使用源程序指令构建补充"
+       echo "This script relies on go mod and supd to manage the goapp project. "
+       echo "Please use supc command when sup command is outside"
        echo ""
-       echo "以下是编译使用的指令："
-       echo "sup get # 使用GOPROXY下载当前目录下的go get依赖, 相当于GOPROXY=\"\" && go get -v"
-       echo "sup get all # 使用GOPROXY依次下载env.sh的\$BUILD_ALL_PATH路径下的go get依赖"
-       echo "sup get all-noproxy # 关闭GOPROXY依次下载env.sh的\$BUILD_ALL_PATH路径下的go get依赖"
-       echo "sup update # 使用GOPROXY更新当前目录下的go get依赖，相当于GORPOXY=\"\" && go get -v -u"
-       echo "sup update all # 使用GOPROXY使用最新的库编译env.sh的\$BUILD_ALL_PATH路径下的程序"
-       echo "sup update all-noproxy # 关闭GOPROXY，使用最新的库编译env.sh的\$BUILD_ALL_PATH路径下的程序"
-       echo "sup build # 使用GOPROXY, go build当前目录的main程序, 支持参数扩展"
-       echo "sup build all # 依次编译env.sh的\$BUILD_ALL_PATH路径下的程序, 使用GOPROXY进行go build"
-       echo "sup build all-noporxy # 依次编译env.sh的\$BUILD_ALL_PATH路径下的程序,关闭GOPROXY进行go build"
+       echo "Building commands:"
+       echo "sup get # Download the go get dependency in the current directory, or use 'go get'"
+       echo "sup get all # Download the go get dependencies in the \$BUILD_ALL_PATH path in 'env.sh' set"
+       echo "sup update # Update to the latest lib the go get dependencies in the current directory"
+       echo "sup update all # Update all path with \$BUILD_ALL_PATH in 'env.sh' set"
+       echo "sup build # do go build in the current directory with \$BUILD_LDFLAGS"
+       echo "sup build all # do go build in \$BUILD_ALL_PATH set"
+       echo "sup mod # like 'go mod'"
        echo ""
-       echo "以下是管理依赖的指令"
-       echo "sup mod # 下载依赖或初始化依赖，若未初始化过，则执行初始化工作，同go mod"
+       echo "Deployment commands："
+       echo "sup status # Running status of current deployment"
+       echo "sup install [app_args] # Deploy the current directory program to supd. app_args for when running exec command args, it will replace \$APP_ARGS"
+       echo "sup install all # Installing all the \$BUILD_ALL_PATH programs to supd with \$APP_ARGS."
+       echo "sup clean # Remove the installed program of current directory."
+       echo "sup clean all # Remove the installed programs of \$BUILD_ALL_PATH"
+       echo "sup publish # Call publish.sh of the current directory if it exists, copy program and \$PUB_APP_RES to publish directory"
+       echo "sup publish all # Publish every path is set of \$BUILD_ALL_PATH"
+       echo "sup start # Start the deployment app of current directory(supd ctl start \$cfg_name)"
+       echo "sup start all # Start all deployment apps of \$BUILD_ALL_PATH"
+       echo "sup restart # Restart the deployment app of current directory(supd ctl restart \$cfg_name)"
+       echo "sup restart all # Restart all deployment apps of \$BUILD_ALL_PATH"
+       echo "sup stop # Stop the deployment app of current directory(supd ctl stop \$cfg_name)"
+       echo "sup stop all # Stop all the deployemnt app of \$BUILD_ALL_PATH"
+       echo "sup tail [\$cfg_name stdout] # Tail stdout of the [application] status 0, which is equivalent to 'supd ctl tail \$cfg_name stdout'"
+       echo "sup tailf [\$cfg_name stdout] # Tail and follow the stdout of the [application] status 0, which is equivalent to 'supd ctl tail -f \$cfg_name stdout'"
+       echo "sup taile [\$cfg_name stderr] # Tail stderr of the [application] status not 0, which is equivalent to 'supd ctl tail \$cfg_name stderr'"
+       echo "sup tailef [\$cfg_name stderr] # Tail and follow the stderr of the [application] status not 0, which is equivalent to 'supd ctl tail -f \$cfg_name stderr'"
        echo ""
-       echo "以下是部署使用的指令："
-       echo "sup status 查看当前工程的部署运作情况"
-       echo "sup install [app_args] # 安装当前目录程序的supd配置文件, 若运行时需要参数，请填写"
-       echo "sup install all # 使用GOPROXY安装env.sh的\$BUILD_ALL_PATH路径下程序的supd配置文件，该指令暂未支持运行参数传递"
-       echo "sup install all-noproxy # 关闭GOPROXY安装env.sh的\$BUILD_ALL_PATH路径下程序的supd配置文件，该指令暂未支持运行参数传递"
-       echo "sup clean # 清理当前目录的发布环境"
-       echo "sup clean all # 依次清理env.sh的\$BUILD_ALL_PATH路径下的发布环境"
-       echo "sup publish # 发布为非源码部署, 若该目录下存在publish.sh, 将优先调用后继续打包。"
-       echo "sup publish all # 依次对\$BUILD_ALL_PATH路径下进行publish操作。"
-       echo "sup start # 启动当前目录的程序(supd ctl start \$cfg_name)"
-       echo "sup start all # 依次启动env.sh的\$BUILD_ALL_PATH路径下的程序"
-       echo "sup restart # 重启当前目录的程序(supd ctrl restart \$cfg_name)"
-       echo "sup restart all # 依次重启env.sh的\$BUILD_ALL_PATH路径下的程序"
-       echo "sup stop # 停止当前目录的程序(supd ctrl stop \$cfg_name)"
-       echo "sup stop all # 依次停止env.sh的\$BUILD_ALL_PATH路径下的程序"
-       echo "sup tail [\$cfg_name stdout] # 查看当前目录[应用]状态0的控制台输出，等价于 supd ctrl tail \$cfg_name stdout"
-       echo "sup tailf [\$cfg_name stdout] # 查看当前目录[应用]状态0的控制台输出，等价于 supd ctrl tail -f \$cfg_name stdout"
+       echo "Environment variables(can set in env.sh or others)"
+       echo "\$PRJ_NAME # Project name, which is used to create script data when creating deployment."
+       echo "\$PRJ_ROOT # Project path, which indicates the root directory where the current project is running."
        echo ""
-       echo "以下是公开可配的环境变量说明"
-       echo "\$PRJ_NAME # 项目英文名称,必须,用于脚本中的项目名称生成, 例如:testing"
-       echo "\$PRJ_ROOT # 项目工作根目录,必须,用于项目资源寻址, 例如:/root"
+       echo "\$BUILD_ALL_PATH # Paths of build all, exmaple: 'cmd1 cmd2'"
+       echo "\$BUILD_LDFLAGS # Env for go build -ldfalgs \$BUILD_LDFLAGS"
+       echo "\$BUILD_GIT_COMMIT # Env of the var path which git describe will write to, example: github.com/gwaysys/supd/version.GitCommit"
        echo ""
-       echo "\$PUB_ROOT_RES # 发布时收集的项目根目录资源文件夹名, 未填写时默认:etc"
-       echo "\$PUB_APP_RES # 发布时应用当前目录下的资源文件夹名, 未填写时默认:res public"
+       echo "\$PUB_ROOT_RES # The resource folder name of the project root directory collected during publishing. If it is not filled in, it will be the default: etc"
+       echo "\$PUB_APP_RES # The resource folder name in the current directory is applied when publishing. If it is not filled in, it defaults to: res public"
        echo ""
-       echo "\$SUP_ETC_DIR # 使用supd的配置文件时生成的supd目录, 未填写时默认:/etc/supd/conf.d"
-       echo "\$SUP_LOG_SIZE # 使用supd时配置文件的maxbytes值,未填写时默认1M"
-       echo "\$SUP_LOG_BAK # 使用supd时配置文件的backups数量,未填写时默认10"
+       echo "\$APP_ARGS # Env for run program with args"
+       echo ""
+       echo "\$SUP_USER # user of running supd configuration"
+       echo "\$SUP_ETC_DIR # The supd etc directory when installing the supd configuration file. If it is not filled in, it defaults to: /etc/supd/conf.d"
+       echo "\$SUP_LOG_SIZE # maxbytes of supd configuration, it defaults to: 1M"
+       echo "\$SUP_LOG_BAK # backups of supd configuration, it defaults to: 10"
        exit 0
     ;;
     "status")
