@@ -137,10 +137,9 @@ func (r *RPCClient) Install(in *InstallArg) (*InstallRet, error) {
 }
 
 type RemoveArg struct {
-	AppName string
+	Name string
 }
-type RemoveRet struct {
-}
+type RemoveRet types.ReloadConfigResult
 
 func (r *RPCClient) Remove(in *RemoveArg) (*RemoveRet, error) {
 	ret := &RemoveRet{}

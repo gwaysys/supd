@@ -50,6 +50,10 @@ type ReloadCommand struct {
 }
 
 type InstallCommand struct {
+	Name string `short:"n" description:"if -n not set, the bin name will be used."`
+}
+
+type RemoveCommand struct {
 }
 
 type PidCommand struct {
@@ -73,6 +77,7 @@ var restartCommand RestartCommand
 var shutdownCommand ShutdownCommand
 var reloadCommand ReloadCommand
 var installCommand InstallCommand
+var removeCommand RemoveCommand
 var setEnvCommand SetEnvCommand
 var getEnvCommand GetEnvCommand
 var pidCommand PidCommand
@@ -134,57 +139,6 @@ func (x *CtlCommand) createRpcClient() *rpcclient.RPCClient {
 	return rpcc
 }
 
-func (x *CtlCommand) Execute(args []string) error {
-	if len(args) == 0 {
-		return nil
-	}
-
-	rpcc := x.createRpcClient()
-	verb := args[0]
-
-	switch verb {
-
-	////////////////////////////////////////////////////////////////////////////////
-	// STATUS
-	////////////////////////////////////////////////////////////////////////////////
-	case "status":
-		x.status(rpcc, args[1:])
-
-		////////////////////////////////////////////////////////////////////////////////
-		// START or STOP
-		////////////////////////////////////////////////////////////////////////////////
-	case "start", "stop", "restart":
-		x.startStopProcesses(rpcc, verb, args[1:])
-
-		////////////////////////////////////////////////////////////////////////////////
-		// SHUTDOWN
-		////////////////////////////////////////////////////////////////////////////////
-	case "shutdown":
-		x.shutdown(rpcc)
-	case "reload":
-		x.reload(rpcc)
-	case "install":
-		x.install(rpcc, args[1:])
-	case "remove":
-		x.remove(rpcc, args[1:])
-	case "set-env":
-		x.setEnv(rpcc, args[1:])
-	case "get-env":
-		x.getEnv(rpcc, args[1:])
-	case "signal":
-		sig_name, processes := args[1], args[2:]
-		x.signal(rpcc, sig_name, processes)
-	case "pid":
-		x.getPid(rpcc, args[1])
-	case "tail":
-		return tailCommand.Execute(args[1:])
-	default:
-		fmt.Println("unknown command")
-	}
-
-	return nil
-}
-
 // get the status of processes
 func (x *CtlCommand) status(rpcc *rpcclient.RPCClient, processes []string) {
 	processesMap := make(map[string]bool)
@@ -193,7 +147,7 @@ func (x *CtlCommand) status(rpcc *rpcclient.RPCClient, processes []string) {
 	}
 	ret, err := rpcc.GetAllProcessInfo()
 	if err != nil {
-		fmt.Println(errors.As(err))
+		x.PrintErr(errors.As(err))
 		os.Exit(1)
 		return
 	}
@@ -277,26 +231,28 @@ func (x *CtlCommand) reload(rpcc *rpcclient.RPCClient) {
 	}
 }
 
-func (x *CtlCommand) install(rpcc *rpcclient.RPCClient, args []string) {
+func (x *CtlCommand) install(rpcc *rpcclient.RPCClient, appName string, args []string) {
 	if len(args) < 1 {
-		fmt.Println("install exec_path [-args]")
+		x.Println("install exec_path [-args]")
 		return
 	}
 	absBin, err := filepath.Abs(args[0])
 	if err != nil {
-		fmt.Println(errors.As(err))
+		x.PrintErr(errors.As(err))
 		return
 	}
 	absDir := filepath.Dir(absBin)
 
-	appName := filepath.Base(absBin)
+	if len(appName) == 0 {
+		appName = filepath.Base(absBin)
+	}
 	extName := filepath.Ext(appName)
 	if len(extName) > 0 {
 		appName = appName[:len(appName)-len(extName)]
 	}
 	curUser, err := user.Current()
 	if err != nil {
-		fmt.Println(errors.As(err))
+		x.PrintErr(errors.As(err))
 		return
 	}
 
@@ -324,44 +280,53 @@ stderr_logfile_backups=10
 
 	// install
 	if _, err := rpcc.Install(&rpcclient.InstallArg{IniName: iniName, IniData: iniData}); err != nil {
-		fmt.Println(errors.As(err))
+		x.PrintErr(errors.As(err))
 		return
 	}
-	fmt.Println("Install done, need call reload to ran")
+	x.Println("Install done, need call reload next for running")
 }
 func (x *CtlCommand) remove(rpcc *rpcclient.RPCClient, args []string) {
 	if len(args) < 1 {
-		fmt.Println("rmove name")
+		x.Println("need remove name")
 		return
 	}
-	x.reload(rpcc)
+	if _, err := rpcc.Remove(&rpcclient.RemoveArg{Name: args[0]}); err != nil {
+		x.PrintErr(errors.As(err))
+		return
+	}
+	x.Println("Remove done")
 }
 
 func (x *CtlCommand) setEnv(rpcc *rpcclient.RPCClient, args []string) {
 	if len(args) < 2 {
-		fmt.Println("need two args for [key value]")
+		x.Println("need two args for [key value]")
 		return
 	}
 	if _, err := rpcc.SetEnv(&rpcclient.SetEnvArg{Key: args[0], Value: args[1]}); err != nil {
-		fmt.Println(err.Error())
+		x.PrintErr(errors.As(err))
 		return
 	}
 }
 func (x *CtlCommand) getEnv(rpcc *rpcclient.RPCClient, args []string) {
 	if len(args) < 1 {
-		fmt.Println("need env key")
+		x.Println("need env key")
 		return
 	}
 	ret, err := rpcc.GetEnv(&rpcclient.GetEnvArg{Key: args[0]})
 	if err != nil {
-		fmt.Println(err.Error())
+		x.PrintErr(errors.As(err))
 		return
 	}
-	fmt.Println(ret.Value)
+	x.Println(ret.Value)
 }
 
 // send signal to one or more processes
-func (x *CtlCommand) signal(rpcc *rpcclient.RPCClient, sig_name string, processes []string) {
+func (x *CtlCommand) signal(rpcc *rpcclient.RPCClient, args []string) {
+	if len(args) < 1 {
+		x.Println("need sig_name, process_name...")
+		return
+	}
+	sig_name, processes := args[1], args[2:]
 	for _, process := range processes {
 		if process == "all" {
 			reply, err := rpcc.SignalAllProcesses(&rpcclient.SignalAllProcessesArg{
@@ -494,11 +459,19 @@ func (c *ReloadCommand) Execute(args []string) error {
 }
 
 func (c *InstallCommand) Execute(args []string) error {
-	ctlCommand.install(ctlCommand.createRpcClient(), args)
+	ctlCommand.install(ctlCommand.createRpcClient(), c.Name, args)
 	return nil
 }
 func (c *InstallCommand) Usage() string {
-	return "exec_path [--args]"
+	return "exec_path [--args] # quick install a template"
+}
+
+func (c *RemoveCommand) Execute(args []string) error {
+	ctlCommand.remove(ctlCommand.createRpcClient(), args)
+	return nil
+}
+func (c *RemoveCommand) Usage() string {
+	return "program_name"
 }
 
 func (c *SetEnvCommand) Execute(args []string) error {
@@ -512,20 +485,11 @@ func (c *GetEnvCommand) Execute(args []string) error {
 }
 
 func (c *SignalCommand) Execute(args []string) error {
-	if len(args) == 0 {
-		fmt.Println("Need sig name and process names")
-		return nil
-	}
-	sig_name, processes := args[0], args[1:]
-	ctlCommand.signal(ctlCommand.createRpcClient(), sig_name, processes)
+	ctlCommand.signal(ctlCommand.createRpcClient(), args)
 	return nil
 }
 
 func (c *PidCommand) Execute(args []string) error {
-	if len(args) == 0 {
-		fmt.Println("Need process name")
-		return nil
-	}
 	ctlCommand.getPid(ctlCommand.createRpcClient(), args[0])
 	return nil
 }
@@ -612,6 +576,10 @@ func init() {
 		"install the program",
 		"install the program",
 		&installCommand)
+	ctlCmd.AddCommand("remove",
+		"remove the program",
+		"remove the program",
+		&removeCommand)
 	ctlCmd.AddCommand("get-env",
 		"get the global env",
 		"get the global env",

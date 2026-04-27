@@ -250,6 +250,40 @@ func (s *Supervisor) Install(args *rpcclient.InstallArg, reply *rpcclient.Instal
 	return nil
 }
 
+func (s *Supervisor) Remove(args *rpcclient.RemoveArg, reply *rpcclient.RemoveRet) error {
+	if len(args.Name) == 0 {
+		return errors.New("name not set")
+	}
+
+	proc := s.procMgr.Find(args.Name)
+	if proc == nil {
+		return errors.ErrNoData.As(args.Name)
+	}
+	processInfo := getProcessInfo(proc)
+	if len(processInfo.IniPath) == 0 {
+		return errors.New("ini file not found")
+	}
+	absIniPath, err := filepath.Abs(os.ExpandEnv(processInfo.IniPath))
+	if err != nil {
+		return errors.As(err)
+	}
+	if !strings.HasPrefix(absIniPath, s.config.GetIncludeDir()) {
+		return errors.New("the ini path outside the inclulde path, can't be rm by safed").As(absIniPath, s.config.GetIncludeDir())
+	}
+	proc.Stop(true)
+	if err := os.Remove(processInfo.IniPath); err != nil {
+		return errors.As(err)
+	}
+	result, err := s.reloadAll()
+	if err != nil {
+		return errors.As(err)
+	}
+	reply.AddedGroup = result.AddedGroup
+	reply.ChangedGroup = result.ChangedGroup
+	reply.RemovedGroup = result.RemovedGroup
+	return nil
+}
+
 func (s *Supervisor) GetProcessInfo(args *struct{ Name string }, reply *rpcclient.ProcessInfoReply) error {
 	proc := s.procMgr.Find(args.Name)
 	if proc == nil {
@@ -739,7 +773,7 @@ func toLogLevel(level string) log.Level {
 	}
 }
 
-func (s *Supervisor) ReloadConfig(args *rpcclient.ReloadConfigArg, reply *rpcclient.ReloadConfigRet) error {
+func (s *Supervisor) reloadAll() (*types.ReloadConfigResult, error) {
 	log.Info("start to reload config")
 	err, addedGroup, changedGroup, removedGroup := s.reload()
 	if len(addedGroup) > 0 {
@@ -753,10 +787,19 @@ func (s *Supervisor) ReloadConfig(args *rpcclient.ReloadConfigArg, reply *rpccli
 	if len(removedGroup) > 0 {
 		log.WithFields(log.Fields{"groups": strings.Join(removedGroup, ",")}).Info("removed groups")
 	}
-	reply.AddedGroup = addedGroup
-	reply.ChangedGroup = changedGroup
-	reply.RemovedGroup = removedGroup
-	return err
+	return &types.ReloadConfigResult{AddedGroup: addedGroup, ChangedGroup: changedGroup, RemovedGroup: removedGroup}, err
+}
+
+func (s *Supervisor) ReloadConfig(args *rpcclient.ReloadConfigArg, reply *rpcclient.ReloadConfigRet) error {
+	result, err := s.reloadAll()
+	if err != nil {
+		return errors.As(err)
+	}
+
+	reply.AddedGroup = result.AddedGroup
+	reply.ChangedGroup = result.ChangedGroup
+	reply.RemovedGroup = result.RemovedGroup
+	return nil
 }
 
 func (s *Supervisor) AddProcessGroup(args *struct{ Name string }, reply *rpcclient.StatusReply) error {

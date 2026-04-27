@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gorilla/mux v1.7.3
-	github.com/gwaylib/errors v0.0.0-20190718041537-e442aeb61900
+	github.com/gwaylib/errors v0.0.4
 	github.com/hpcloud/tail v1.0.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect

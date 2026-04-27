@@ -20,7 +20,7 @@ type ProcessInfo struct {
 	StderrLogfile string `xml:"stderr_logfile" json:"stderr_logfile"`
 	Pid           int    `xml:"pid" json:"pid"`
 	Directory     string `xml:"directory" json:"directory"`
-	Command       string `xml:"directory" json:"command"`
+	Command       string `xml:"command" json:"command"`
 	IniPath       string `xml:"ini_path" json:"ini_path"`
 }
 

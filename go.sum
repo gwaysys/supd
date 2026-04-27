@@ -146,6 +146,8 @@ github.com/gorilla/mux v1.7.3/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2z
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
 github.com/gwaylib/errors v0.0.0-20190718041537-e442aeb61900 h1:UfAB04zArgj1ILiSPPoMbR4Im7IJ5eqyeJ6zVh2xctE=
 github.com/gwaylib/errors v0.0.0-20190718041537-e442aeb61900/go.mod h1:mc+ainsF9wgufeFi7TzP0n82I1NPYj7DvUJ6noSszD8=
+github.com/gwaylib/errors v0.0.4 h1:pc/M/FLLpAPavCx/DpIF/JNa9cf/35bwVjmDylF3VGk=
+github.com/gwaylib/errors v0.0.4/go.mod h1:+HS/JYB/LwqAWsVPCZHFYhwdDiQ/N2kuUqhYD44tfpY=
 github.com/hashicorp/consul/api v1.1.0/go.mod h1:VmuI/Lkw1nC05EYQWNKwWGbkg+FbDBtguAZLlVdkD9Q=
 github.com/hashicorp/consul/sdk v0.1.1/go.mod h1:VKf9jXwCTEY1QZP2MOLRhb5i/I/ssyNV1vwHyQBF0x8=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
