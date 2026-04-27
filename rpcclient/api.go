@@ -3,8 +3,8 @@ package rpcclient
 import (
 	"fmt"
 
-	"github.com/gwaysys/supd/types"
 	"github.com/gwaylib/errors"
+	"github.com/gwaysys/supd/types"
 )
 
 type StatusReply struct {
@@ -13,6 +13,10 @@ type StatusReply struct {
 
 type ProcessInfoReply struct {
 	ProcessInfo *types.ProcessInfo
+}
+
+type IncludeDirReply struct {
+	Path string
 }
 
 type AllProcessInfoReply struct {
@@ -117,7 +121,37 @@ func (r *RPCClient) Shutdown() (*ShutdownRet, error) {
 	return ret, nil
 }
 
+type InstallArg struct {
+	IniName string
+	IniData []byte
+}
+type InstallRet struct {
+}
+
+func (r *RPCClient) Install(in *InstallArg) (*InstallRet, error) {
+	ret := &InstallRet{}
+	if err := r.call("Supervisor.Install", in, ret); err != nil {
+		return nil, errors.As(err)
+	}
+	return ret, nil
+}
+
+type RemoveArg struct {
+	AppName string
+}
+type RemoveRet struct {
+}
+
+func (r *RPCClient) Remove(in *RemoveArg) (*RemoveRet, error) {
+	ret := &RemoveRet{}
+	if err := r.call("Supervisor.Remove", in, ret); err != nil {
+		return nil, errors.As(err)
+	}
+	return ret, nil
+}
+
 type ReloadConfigArg struct {
+	// TODO: support one program reload and send reload event to program
 }
 type ReloadConfigRet types.ReloadConfigResult
 
@@ -199,6 +233,20 @@ type GetEnvRet struct {
 func (r *RPCClient) GetEnv(in *GetEnvArg) (*GetEnvRet, error) {
 	ret := &GetEnvRet{}
 	if err := r.call("Supervisor.GetEnv", in, ret); err != nil {
+		return nil, errors.As(err)
+	}
+	return ret, nil
+}
+
+type GetEtcDirArg struct {
+}
+type GetEtcDirRet struct {
+	Path string
+}
+
+func (r *RPCClient) GetEtcDir(in *GetEtcDirArg) (*GetEtcDirRet, error) {
+	ret := &GetEtcDirRet{}
+	if err := r.call("Supervisor.GetEtcDir", in, ret); err != nil {
 		return nil, errors.As(err)
 	}
 	return ret, nil

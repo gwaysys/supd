@@ -96,7 +96,9 @@ func (c *ConfigEntry) String() string {
 }
 
 type Config struct {
-	configFile string
+	configFile    string
+	configIniFile *ini.File
+
 	//mapping between the section name and the configure
 	entries map[string]*ConfigEntry
 
@@ -108,10 +110,10 @@ func NewConfigEntry(configDir string) *ConfigEntry {
 }
 
 func NewConfig(configFile string) *Config {
-	return &Config{configFile, make(map[string]*ConfigEntry), NewProcessGroup()}
+	return &Config{configFile: configFile, configIniFile: nil, entries: make(map[string]*ConfigEntry), ProgramGroup: NewProcessGroup()}
 }
 
-//create a new entry or return the already-exist entry
+// create a new entry or return the already-exist entry
 func (c *Config) createEntry(name string, configDir string) *ConfigEntry {
 	entry, ok := c.entries[name]
 
@@ -122,7 +124,6 @@ func (c *Config) createEntry(name string, configDir string) *ConfigEntry {
 	return entry
 }
 
-//
 // return the loaded programs
 func (c *Config) Load() ([]string, error) {
 	c.ProgramGroup = NewProcessGroup()
@@ -133,7 +134,7 @@ func (c *Config) Load() ([]string, error) {
 		return nil, errors.As(err, c.configFile)
 	}
 
-	// decode program config
+	// append conf.d files to supd.ini
 	includeFiles := c.getIncludeFiles(cfg)
 	for _, f := range includeFiles {
 		// decode
@@ -141,25 +142,22 @@ func (c *Config) Load() ([]string, error) {
 		if err != nil {
 			return nil, errors.As(err, f)
 		}
-		dData, err := Decode(data, ConfKey)
-		if err != nil {
-			return nil, errors.As(err, f)
-		}
-
-		// set filepath to entry
-		dData = append(dData, []byte("\n")...)
-		dData = append(dData, []byte(fmt.Sprintf("ini_path=%s\n", f))...)
-
+		dData := data
 		// checksum ini format
 		if _, err := ini.InsensitiveLoad(dData); err != nil {
 			log.Warnf("Error ini file:%s", f)
 			continue
 		}
+
+		// set filepath to entry
+		dData = append(dData, []byte("\n")...)
+		dData = append(dData, []byte(fmt.Sprintf("ini_path=%s\n", f))...)
 		if err := cfg.Append(dData); err != nil {
 			return nil, errors.As(err, f)
 		}
 	}
-	return c.parse(cfg), nil
+	c.configIniFile = cfg
+	return c.parseAll(cfg), nil
 }
 
 func (c *Config) getIncludeFiles(cfg *ini.File) []string {
@@ -170,14 +168,12 @@ func (c *Config) getIncludeFiles(cfg *ini.File) []string {
 			env := NewStringExpression("here", c.GetConfigFileDir())
 			files := strings.Fields(os.ExpandEnv(key.Value()))
 			for _, f_raw := range files {
-				dir := c.GetConfigFileDir()
 				f, err := env.Eval(f_raw)
 				if err != nil {
+					log.Warn(errors.As(err))
 					continue
 				}
-				if filepath.IsAbs(f) {
-					dir = filepath.Dir(f)
-				}
+				dir := filepath.Dir(f)
 				fileInfos, err := ioutil.ReadDir(dir)
 				if err == nil {
 					goPattern := toRegexp(filepath.Base(f))
@@ -200,7 +196,7 @@ func (c *Config) getIncludeFiles(cfg *ini.File) []string {
 
 }
 
-func (c *Config) parse(cfg *ini.File) []string {
+func (c *Config) parseAll(cfg *ini.File) []string {
 	c.parseGroup(cfg)
 	loaded_programs := c.parseProgram(cfg)
 
@@ -212,6 +208,7 @@ func (c *Config) parse(cfg *ini.File) []string {
 			entry.parse(section)
 		}
 	}
+
 	return loaded_programs
 }
 
@@ -219,7 +216,23 @@ func (c *Config) GetConfigFileDir() string {
 	return filepath.Dir(c.configFile)
 }
 
-//convert supervisor file pattern to the go regrexp
+func (c *Config) GetIncludeDir() string {
+	if c.configIniFile == nil {
+		// make to default
+		return filepath.Join(filepath.Dir(c.configFile), "conf.d")
+	}
+
+	// decode the 'include' section
+	section := c.configIniFile.Section("include")
+	if !section.HasKey("files") {
+		// make to default
+		return filepath.Join(filepath.Dir(c.configFile), "conf.d")
+	}
+	key := section.Key("files")
+	return filepath.Dir(os.ExpandEnv(key.Value()))
+}
+
+// convert supervisor file pattern to the go regrexp
 func toRegexp(pattern string) string {
 	tmp := strings.Split(pattern, ".")
 	for i, t := range tmp {
@@ -229,14 +242,14 @@ func toRegexp(pattern string) string {
 	return strings.Join(tmp, "\\.")
 }
 
-//get the unix_http_server section
+// get the unix_http_server section
 func (c *Config) GetUnixHttpServer() (*ConfigEntry, bool) {
 	entry, ok := c.entries["unix_http_server"]
 
 	return entry, ok
 }
 
-//get the supervisord section
+// get the supervisord section
 func (c *Config) GetSupervisord() (*ConfigEntry, bool) {
 	entry, ok := c.entries["supervisord"]
 	return entry, ok
@@ -311,7 +324,7 @@ func (c *Config) GetProgramNames() []string {
 	return result
 }
 
-//return the proram configure entry or nil
+// return the proram configure entry or nil
 func (c *Config) GetProgram(name string) *ConfigEntry {
 	for _, entry := range c.entries {
 		if entry.IsProgram() && entry.GetProgramName() == name {
@@ -359,7 +372,8 @@ func (c *ConfigEntry) GetInt(key string, defValue int) int {
 }
 
 // GetEnv get the value of key as environment setting. An environment string example:
-//  environment = A="env 1",B="this is a test"
+//
+//	environment = A="env 1",B="this is a test"
 func (c *ConfigEntry) GetEnv(key string) []string {
 	value, ok := c.keyValues[key]
 	env := make([]string, 0)
@@ -414,7 +428,7 @@ func (c *ConfigEntry) GetEnv(key string) []string {
 	return result
 }
 
-//get the value of key as string
+// get the value of key as string
 func (c *ConfigEntry) GetString(key string, defValue string) string {
 	s, ok := c.keyValues[key]
 
@@ -433,7 +447,7 @@ func (c *ConfigEntry) GetString(key string, defValue string) string {
 	return defValue
 }
 
-//get the value of key as string and attempt to parse it with StringExpression
+// get the value of key as string and attempt to parse it with StringExpression
 func (c *ConfigEntry) GetStringExpression(key string, defValue string) string {
 	s, ok := c.keyValues[key]
 	if !ok || s == "" {
@@ -477,7 +491,6 @@ func (c *ConfigEntry) GetStringArray(key string, sep string) []string {
 //	logSize=1GB
 //	logSize=1KB
 //	logSize=1024
-//
 func (c *ConfigEntry) GetBytes(key string, defValue int) int {
 	v, ok := c.keyValues[key]
 
@@ -554,9 +567,11 @@ func (c *Config) parseProgram(cfg *ini.File) []string {
 
 		//if it is program or event listener
 		if program_or_event_listener {
+			programName := section.Name()[len(prefix):]
+			originalProcName := programName
+
 			//get the number of processes
 			numProcs, err := section.Key("numprocs").Int()
-			programName := section.Name()[len(prefix):]
 			if err != nil {
 				numProcs = 1
 			}
@@ -569,7 +584,6 @@ func (c *Config) parseProgram(cfg *ini.File) []string {
 					}).Error("no process_num in process name")
 				}
 			}
-			originalProcName := programName
 			if err == nil {
 				originalProcName = procName.String()
 			}

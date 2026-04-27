@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/user"
+	"path/filepath"
 	"strings"
 
 	"github.com/gwaysys/supd/config"
@@ -47,6 +49,9 @@ type ShutdownCommand struct {
 type ReloadCommand struct {
 }
 
+type InstallCommand struct {
+}
+
 type PidCommand struct {
 }
 
@@ -67,6 +72,7 @@ var stopCommand StopCommand
 var restartCommand RestartCommand
 var shutdownCommand ShutdownCommand
 var reloadCommand ReloadCommand
+var installCommand InstallCommand
 var setEnvCommand SetEnvCommand
 var getEnvCommand GetEnvCommand
 var pidCommand PidCommand
@@ -157,6 +163,10 @@ func (x *CtlCommand) Execute(args []string) error {
 		x.shutdown(rpcc)
 	case "reload":
 		x.reload(rpcc)
+	case "install":
+		x.install(rpcc, args[1:])
+	case "remove":
+		x.remove(rpcc, args[1:])
 	case "set-env":
 		x.setEnv(rpcc, args[1:])
 	case "get-env":
@@ -267,6 +277,66 @@ func (x *CtlCommand) reload(rpcc *rpcclient.RPCClient) {
 	}
 }
 
+func (x *CtlCommand) install(rpcc *rpcclient.RPCClient, args []string) {
+	if len(args) < 1 {
+		fmt.Println("install exec_path [-args]")
+		return
+	}
+	absBin, err := filepath.Abs(args[0])
+	if err != nil {
+		fmt.Println(errors.As(err))
+		return
+	}
+	absDir := filepath.Dir(absBin)
+
+	appName := filepath.Base(absBin)
+	extName := filepath.Ext(appName)
+	if len(extName) > 0 {
+		appName = appName[:len(appName)-len(extName)]
+	}
+	curUser, err := user.Current()
+	if err != nil {
+		fmt.Println(errors.As(err))
+		return
+	}
+
+	iniName := appName + ".ini"
+	iniData := []byte(fmt.Sprintf(`
+[program:%s]
+user=%s
+environment=PRJ_ROOT=$PRJ_ROOT,LD_LIBRARY_PATH=""
+directory=%s
+command=%s
+autostart=true
+autorestart=true
+startsecs=3
+startretries=3
+exitcodes=0,2
+stopsignal=TERM
+stopwaitsecs=10
+stdout_logfile=$PRJ_ROOT/var/log/%s.logfile.stdout
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=10
+stdout_logfile=$PRJ_ROOT/var/log/%s.logfile.stdout
+stderr_logfile_maxbytes=10MB
+stderr_logfile_backups=10
+`, appName, curUser.Username, absDir, strings.Join(args, " "), appName, appName))
+
+	// install
+	if _, err := rpcc.Install(&rpcclient.InstallArg{IniName: iniName, IniData: iniData}); err != nil {
+		fmt.Println(errors.As(err))
+		return
+	}
+	fmt.Println("Install done, need call reload to ran")
+}
+func (x *CtlCommand) remove(rpcc *rpcclient.RPCClient, args []string) {
+	if len(args) < 1 {
+		fmt.Println("rmove name")
+		return
+	}
+	x.reload(rpcc)
+}
+
 func (x *CtlCommand) setEnv(rpcc *rpcclient.RPCClient, args []string) {
 	if len(args) < 2 {
 		fmt.Println("need two args for [key value]")
@@ -320,7 +390,7 @@ func (x *CtlCommand) signal(rpcc *rpcclient.RPCClient, sig_name string, processe
 
 // get the pid of running program
 func (x *CtlCommand) getPid(rpcc *rpcclient.RPCClient, process string) {
-	ret, err := rpcc.GetProcessInfo(&rpcclient.GetProcessInfoArg{process})
+	ret, err := rpcc.GetProcessInfo(&rpcclient.GetProcessInfoArg{Name: process})
 	if err != nil {
 		fmt.Printf("program '%s' not found\n", process)
 		os.Exit(1)
@@ -423,6 +493,14 @@ func (c *ReloadCommand) Execute(args []string) error {
 	return nil
 }
 
+func (c *InstallCommand) Execute(args []string) error {
+	ctlCommand.install(ctlCommand.createRpcClient(), args)
+	return nil
+}
+func (c *InstallCommand) Usage() string {
+	return "exec_path [--args]"
+}
+
 func (c *SetEnvCommand) Execute(args []string) error {
 	ctlCommand.setEnv(ctlCommand.createRpcClient(), args)
 	return nil
@@ -462,7 +540,7 @@ func (c *TailCommand) Execute(args []string) error {
 		std = args[1]
 	}
 	rpcc := ctlCommand.createRpcClient()
-	ret, err := rpcc.GetProcessInfo(&rpcclient.GetProcessInfoArg{process})
+	ret, err := rpcc.GetProcessInfo(&rpcclient.GetProcessInfoArg{Name: process})
 	if err != nil {
 		fmt.Printf("program '%s' not found\n", process)
 		os.Exit(1)
@@ -530,6 +608,10 @@ func init() {
 		"reload the programs",
 		"reload the programs",
 		&reloadCommand)
+	ctlCmd.AddCommand("install",
+		"install the program",
+		"install the program",
+		&installCommand)
 	ctlCmd.AddCommand("get-env",
 		"get the global env",
 		"get the global env",

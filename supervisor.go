@@ -2,6 +2,7 @@ package supd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/gwaysys/supd/types"
 	"github.com/gwaysys/supd/util"
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/ini.v1"
 )
 
 const (
@@ -207,11 +209,51 @@ func (s *Supervisor) GetAllProcessInfo(args *struct{}, reply *rpcclient.AllProce
 	return nil
 }
 
+func (s *Supervisor) GetIncludeDir(args *struct{}, reply *rpcclient.IncludeDirReply) error {
+	reply.Path = s.config.GetIncludeDir()
+	return nil
+}
+
+func (s *Supervisor) Install(args *rpcclient.InstallArg, reply *rpcclient.InstallRet) error {
+	// decode ini file
+	iniData := args.IniData
+	includeDir := s.config.GetIncludeDir()
+	fileName, err := filepath.Abs(filepath.Join(includeDir, args.IniName))
+	if err != nil {
+		return errors.As(err)
+	}
+	if !strings.HasPrefix(fileName, includeDir) {
+		return errors.New("can not install outside include path")
+	}
+	if _, err := os.Stat(fileName); err != nil {
+		if !os.IsNotExist(err) {
+			return errors.As(err)
+		}
+		// file not exist, pass
+	} else {
+		return errors.New("file already exist").As(fileName)
+	}
+
+	// set filepath to entry
+	iniData = append(iniData, []byte("\n")...)
+	iniData = append(iniData, []byte(fmt.Sprintf("ini_path=%s\n", fileName))...)
+
+	if _, err := ini.InsensitiveLoad(iniData); err != nil {
+		return errors.As(err)
+	}
+
+	// check pass, write to file
+	if err := ioutil.WriteFile(fileName, iniData, 0600); err != nil {
+		return errors.As(err)
+	}
+	// TODO: auto reload?
+	return nil
+}
+
 func (s *Supervisor) GetProcessInfo(args *struct{ Name string }, reply *rpcclient.ProcessInfoReply) error {
-	log.Info("Get process info of: ", args.Name)
 	proc := s.procMgr.Find(args.Name)
 	if proc == nil {
-		return fmt.Errorf("no process named %s", args.Name)
+		return errors.ErrNoData.As(args.Name)
 	}
 
 	reply.ProcessInfo = getProcessInfo(proc)
@@ -610,8 +652,9 @@ func (s *Supervisor) startEventListeners() {
 }
 
 func (s *Supervisor) startHttpServer() error {
+	s.rpcServer.Stop() // restart listen port
+
 	httpServerConfig, ok := s.config.GetInetHttpServer()
-	s.rpcServer.Stop()
 	if ok {
 		addr := httpServerConfig.GetString("port", "")
 		if addr != "" {

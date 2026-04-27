@@ -29,7 +29,7 @@ func (sr *SupervisorRestful) CreateProgramHandler() http.Handler {
 //
 // json array to present the status of all programs
 func (sr *SupervisorRestful) ListProgram(w http.ResponseWriter, req *http.Request) {
-	result := rpcclient.AllProcessInfoReply{make([]types.ProcessInfo, 0)}
+	result := rpcclient.AllProcessInfoReply{AllProcessInfo: make([]types.ProcessInfo, 0)}
 	if sr.supervisor.GetAllProcessInfo(nil, &result) == nil {
 		json.NewEncoder(w).Encode(result.AllProcessInfo)
 	} else {
