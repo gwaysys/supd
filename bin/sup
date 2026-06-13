@@ -380,7 +380,7 @@ reCmd() {
             buildp=$BUILD_ALL_PATH
         fi
         case "$1" in 
-            "start"|"stop"|"restart"|"install"|clean)
+            "start"|"stop"|"restart"|"install"|"clean")
                 if [ -n "$INSTALL_ALL_PATH" ]; then
                     buildp=$INSTALL_ALL_PATH
                 fi
