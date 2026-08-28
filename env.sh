@@ -31,7 +31,7 @@ export INSTALL_ALL_PATH="" # for running, using $BUILD_ALL_PATH when not set
 # -------------------------------------------------
 # export BUILD_GIT_COMMIT="github.com/gwaysys/supd/version.GitCommit" # it will be set when go build ldflags if set
 # export BUILD_LDFLAGS="" # Extend go build flag in sup build
-export PUB_ROOT_RES="etc script setup.sh" # The folders that need to be packaged in the root directory, such as "etc", using default is not set
+export PUB_ROOT_RES="etc" # The folders that need to be packaged in the root directory, such as "etc", using default is not set
 # export PUB_APP_RES="public" # The folders under the app, such as "public", using default is not set
 #
 
