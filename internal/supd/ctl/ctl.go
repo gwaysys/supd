@@ -10,7 +10,7 @@ import (
 
 	"github.com/gwaysys/supd/config"
 	"github.com/gwaysys/supd/rpcclient"
-	"github.com/gwaysys/supd/svc"
+	"github.com/gwaysys/supd/internal/supd/svc"
 	"github.com/gwaysys/supd/types"
 
 	"github.com/gwaylib/errors"
