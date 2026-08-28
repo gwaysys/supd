@@ -1,4 +1,4 @@
-package supd
+package svc
 
 import (
 	"crypto/sha1"

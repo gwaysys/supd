@@ -1,4 +1,4 @@
-package supd
+package ctl
 
 import (
 	"encoding/json"
@@ -10,10 +10,12 @@ import (
 
 	"github.com/gwaysys/supd/config"
 	"github.com/gwaysys/supd/rpcclient"
+	"github.com/gwaysys/supd/svc"
 	"github.com/gwaysys/supd/types"
 
 	"github.com/gwaylib/errors"
 	"github.com/hpcloud/tail"
+	"github.com/jessevdk/go-flags"
 )
 
 // current only support ctl status
@@ -85,12 +87,12 @@ var signalCommand SignalCommand
 var tailCommand TailCommand
 
 func (x *CtlCommand) getServerUrl() string {
-	options.Configuration, _ = findSupervisordConf()
+	cfg, _ := svc.FindSupervisordConf()
 
 	if x.ServerUrl != "" {
 		return x.ServerUrl
-	} else if _, err := os.Stat(options.Configuration); err == nil {
-		config := config.NewConfig(options.Configuration)
+	} else if _, err := os.Stat(cfg); err == nil {
+		config := config.NewConfig(cfg)
 		config.Load()
 		if entry, ok := config.GetSupervisorctl(); ok {
 			serverurl := entry.GetString("serverurl", "")
@@ -103,12 +105,12 @@ func (x *CtlCommand) getServerUrl() string {
 }
 
 func (x *CtlCommand) getUser() string {
-	options.Configuration, _ = findSupervisordConf()
+	cfg, _ := svc.FindSupervisordConf()
 
 	if x.User != "" {
 		return x.User
-	} else if _, err := os.Stat(options.Configuration); err == nil {
-		config := config.NewConfig(options.Configuration)
+	} else if _, err := os.Stat(cfg); err == nil {
+		config := config.NewConfig(cfg)
 		config.Load()
 		if entry, ok := config.GetSupervisorctl(); ok {
 			user := entry.GetString("username", "")
@@ -119,12 +121,12 @@ func (x *CtlCommand) getUser() string {
 }
 
 func (x *CtlCommand) getPassword() string {
-	options.Configuration, _ = findSupervisordConf()
+	cfg, _ := svc.FindSupervisordConf()
 
 	if x.Password != "" {
 		return x.Password
-	} else if _, err := os.Stat(options.Configuration); err == nil {
-		config := config.NewConfig(options.Configuration)
+	} else if _, err := os.Stat(cfg); err == nil {
+		config := config.NewConfig(cfg)
 		config.Load()
 		if entry, ok := config.GetSupervisorctl(); ok {
 			password := entry.GetString("password", "")
@@ -543,7 +545,13 @@ func (c *TailCommand) Execute(args []string) error {
 	return nil
 }
 
-func init() {
+// Register wires the ctl subcommand and its sub-subcommands (status,
+// start, stop, restart, shutdown, reload, install, remove, get-env,
+// set-env, signal, pid, tail) into the supplied go-flags parser.
+//
+// The supd root package calls this from its init() so that the global
+// `parser` variable does not have to be exported into this package.
+func Register(parser *flags.Parser) {
 	ctlCmd, _ := parser.AddCommand("ctl",
 		"Control a running daemon",
 		"The ctl subcommand resembles supervisorctl command of original daemon.",

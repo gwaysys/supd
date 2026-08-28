@@ -1,136 +1,60 @@
+// supd is the entry-point package for the supervisor daemon. After the
+// recent refactor it is intentionally thin: it owns the root flag parser,
+// the cross-subcommand Options struct (--configuration / --daemon /
+// --env-file) and the Run() helper invoked by cmd/supd/main.go. All
+// actual implementation lives in the ctl/, svc/ and setup/ subpackages.
 package supd
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"os/signal"
-	"path/filepath"
-	"strings"
-	"syscall"
-	"unicode"
 
+	"github.com/gwaysys/supd/ctl"
 	"github.com/gwaysys/supd/logger"
+	"github.com/gwaysys/supd/setup"
+	"github.com/gwaysys/supd/svc"
 
 	"github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
 )
 
+// Options mirrors the legacy root-package flag struct. Kept here so the
+// global go-flags parser can bind flags at the root level before
+// dispatching to subcommands.
 type Options struct {
 	Configuration string `short:"c" long:"configuration" description:"the configuration file"`
 	Daemon        bool   `short:"d" long:"daemon" description:"run as daemon"`
 	EnvFile       string `long:"env-file" description:"the environment file"`
 }
 
+var options Options
+var parser = flags.NewParser(&options, flags.Default & ^flags.PrintErrors)
+
+// GetOptions returns the root-package Options pointer so other packages
+// (e.g. ctl) can read the daemon-mode flag values without depending on
+// the unexported global directly.
+func GetOptions() *Options {
+	return &options
+}
+
+// init configures the default logrus logger and registers the three
+// top-level subcommands: ctl, setup and (via svc) the daemon mode.
+// version/init/encode/decode are registered from their respective files
+// in this package (version.go, config_template.go, encode.go).
 func init() {
 	log.SetOutput(os.Stdout)
 	log.SetFormatter(&logger.CustomFormatter{FullTimestamp: true})
 	// log.SetFormatter(&log.JSONFormatter{})
 	log.SetLevel(log.DebugLevel)
+
+	ctl.Register(parser)
+	setup.Register(parser)
 }
 
-func initSignals(s *Supervisor) {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		sig := <-sigs
-		log.WithFields(log.Fields{"signal": sig}).Info("receive a signal to stop all process & exit")
-		s.procMgr.StopAllProcesses()
-		os.Exit(-1)
-	}()
-
-}
-
-var options Options
-var parser = flags.NewParser(&options, flags.Default & ^flags.PrintErrors)
-
-func LoadEnvFile() {
-	if len(options.EnvFile) <= 0 {
-		return
-	}
-	//try to open the environment file
-	f, err := os.Open(options.EnvFile)
-	if err != nil {
-		log.WithFields(log.Fields{"file": options.EnvFile}).Error("Fail to open environment file")
-		return
-	}
-	defer f.Close()
-	reader := bufio.NewReader(f)
-	for {
-		//for each line
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			break
-		}
-		//if line starts with '#', it is a comment line, ignore it
-		line = strings.TrimSpace(line)
-		if len(line) > 0 && line[0] == '#' {
-			continue
-		}
-		//if environment variable is exported with "export"
-		if strings.HasPrefix(line, "export") && len(line) > len("export") && unicode.IsSpace(rune(line[len("export")])) {
-			line = strings.TrimSpace(line[len("export"):])
-		}
-		//split the environment variable with "="
-		pos := strings.Index(line, "=")
-		if pos != -1 {
-			k := strings.TrimSpace(line[0:pos])
-			v := strings.TrimSpace(line[pos+1:])
-			//if key and value are not empty, put it into the environment
-			if len(k) > 0 && len(v) > 0 {
-				os.Setenv(k, v)
-			}
-		}
-	}
-}
-
-// find the supervisord.conf in following order:
-//
-// 1. $CWD/supervisord.conf
-// 2. $CWD/etc/supervisord.conf
-// 3. /etc/supervisord.conf
-// 4. /etc/supervisor/supervisord.conf (since Supervisor 3.3.0)
-// 5. ../etc/supervisord.conf (Relative to the executable)
-// 6. ../supervisord.conf (Relative to the executable)
-func findSupervisordConf() (string, error) {
-	possibleSupervisordConf := []string{
-		options.Configuration,
-		"./supd.ini",
-		"./etc/supd.ini",
-		"/etc/supd/supd.ini",
-		"../etc/supd/supd.ini",
-		"../supd.ini",
-	}
-
-	for _, file := range possibleSupervisordConf {
-		if _, err := os.Stat(file); err == nil {
-			abs_file, err := filepath.Abs(file)
-			if err == nil {
-				return abs_file, nil
-			} else {
-				return file, nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("fail to find supervisord.conf")
-}
-
-func RunServer() {
-	// infinite loop for handling Restart ('reload' command)
-	LoadEnvFile()
-	for true {
-		options.Configuration, _ = findSupervisordConf()
-		s := NewSupervisor(options.Configuration)
-		initSignals(s)
-		if sErr, _, _, _ := s.reload(); sErr != nil {
-			log.Fatal(sErr)
-		}
-
-		s.waitForExit()
-	}
-}
-
+// Run is the entry point invoked by cmd/supd/main.go. It reaps zombies
+// (linux only), then parses CLI flags. When no subcommand is given it
+// either daemonizes (--daemon) or runs the supervisor in the foreground
+// via svc.NewServer().Run().
 func Run() {
 	ReapZombie()
 
@@ -143,11 +67,13 @@ func Run() {
 				os.Exit(0)
 			case flags.ErrCommandRequired:
 				if options.Daemon {
-					Deamonize(RunServer)
+					svc.Daemonize(func() {
+						_ = svc.NewServer().Run()
+					})
 				} else if len(os.Args) == 2 {
 					fmt.Println(err.Error())
 				} else {
-					RunServer()
+					_ = svc.NewServer().Run()
 				}
 			default:
 				fmt.Fprintf(os.Stderr, "error when parsing command: %s\n", err)

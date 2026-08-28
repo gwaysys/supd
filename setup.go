@@ -10,6 +10,8 @@ import (
 // implementation lives in the github.com/gwaysys/supd/setup package.
 type SetupCommand = setup.Command
 
-func init() {
-	setup.Register(parser)
-}
+// setupCommand is retained for backwards compatibility with code that
+// referenced the root-package global. It is registered by setup.Register
+// from main.init(), so this declaration is intentionally side-effect-free
+// (no parser.AddCommand call here).
+var setupCommand SetupCommand
