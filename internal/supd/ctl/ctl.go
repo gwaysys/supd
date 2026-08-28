@@ -259,7 +259,30 @@ func (x *CtlCommand) install(rpcc *rpcclient.RPCClient, appName string, args []s
 	}
 
 	iniName := appName + ".ini"
-	iniData := []byte(fmt.Sprintf(`
+	iniData := []byte(RenderProgramIni(appName, curUser.Username, absDir, strings.Join(args, " ")))
+
+	// install
+	if _, err := rpcc.Install(&rpcclient.InstallArg{IniName: iniName, IniData: iniData}); err != nil {
+		x.PrintErr(errors.As(err))
+		return
+	}
+	x.Println("Install done, need call reload next for running")
+}
+
+// RenderProgramIni builds the body of a program:xxx ini section for
+// `supd ctl install <exec_path> [--args]`. It is exported so other
+// packages (notably the setup installer) can reuse the same template
+// without duplicating the literal format string.
+//
+//	appName: program name without extension (e.g. "myapp")
+//	username: OS user the program runs as
+//	absDir: absolute directory containing the executable
+//	command: full command line including any flags the user passed
+//
+// The output is wrapped with leading and trailing newlines so it can be
+// dropped into an ini file without polluting adjacent sections.
+func RenderProgramIni(appName, username, absDir, command string) string {
+	return fmt.Sprintf(`
 [program:%s]
 user=%s
 environment=PRJ_ROOT=$PRJ_ROOT,LD_LIBRARY_PATH=""
@@ -278,14 +301,7 @@ stdout_logfile_backups=10
 stdout_logfile=$PRJ_ROOT/var/log/%s.logfile.stdout
 stderr_logfile_maxbytes=10MB
 stderr_logfile_backups=10
-`, appName, curUser.Username, absDir, strings.Join(args, " "), appName, appName))
-
-	// install
-	if _, err := rpcc.Install(&rpcclient.InstallArg{IniName: iniName, IniData: iniData}); err != nil {
-		x.PrintErr(errors.As(err))
-		return
-	}
-	x.Println("Install done, need call reload next for running")
+`, appName, username, absDir, command, appName, appName)
 }
 func (x *CtlCommand) remove(rpcc *rpcclient.RPCClient, args []string) {
 	if len(args) < 1 {

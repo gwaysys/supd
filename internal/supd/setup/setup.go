@@ -61,6 +61,34 @@ loglevel = info
 files = /etc/supd/conf.d/*.ini
 `
 
+// DemoIniTpl is a ready-to-use program template written by setup install
+// to <etc-path>/conf.d/demo.ini.tpl. The user renames it to demo.ini (and
+// edits the placeholders) to enable the demo program.
+//
+// Kept byte-for-byte identical with cmd/supd/etc/supd/conf.d/demo.ini.tpl.
+const DemoIniTpl = `# rename this tpl to demo.ini for running
+[program:demo]
+#user=root # run user
+#environment=GIN_MODE="release"
+#directory= # current run directory
+command=ping 163.com # run program
+autostart=true
+startsecs=3
+startretries=3
+autorestart=true
+exitcodes=0,2
+stopsignal=TERM
+stopwaitsecs=10
+#stopasgroup=true
+#killasgroup=true
+stdout_logfile=$PRJ_ROOT/var/log/demo.logfile.stdout # if PRJ_ROOT not set, using the root directory
+stdout_logfile_maxbytes=1MB
+stdout_logfile_backups=10
+stderr_logfile=$PRJ_ROOT/var/log/demo.logfile.stderr
+stderr_logfile_maxbytes=1MB
+stderr_logfile_backups=10
+`
+
 // handlers is populated by setup_systemd.go / setup_darwin.go via build tags.
 // The key is the OS identifier returned by envKind(); the value is the function
 // that performs install/upgrade/clean for that init system, given the resolved
@@ -297,6 +325,19 @@ func installBin(src, installBinPath, installEtcPath string) error {
 		}
 	} else {
 		log.Printf("supd.ini already present at %s, skipping write", iniDst)
+	}
+
+	// Drop a program template into conf.d/ so the user has a working
+	// example to start from. Naming it .tpl keeps supd's include glob
+	// (*.ini in [include] files = /etc/supd/conf.d/*.ini) from picking
+	// it up before the user has finished editing it.
+	tplDst := filepath.Join(installEtcPath, "conf.d", "demo.ini.tpl")
+	if needsWrite(tplDst) {
+		if err := writeAsRoot(tplDst, []byte(DemoIniTpl), 0644); err != nil {
+			return err
+		}
+	} else {
+		log.Printf("demo.ini.tpl already present at %s, skipping write", tplDst)
 	}
 
 	if !isDryRun() {

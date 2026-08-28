@@ -210,3 +210,19 @@ func TestSetupExecuteExtractMissingSource(t *testing.T) {
 		t.Fatalf("Execute(extract) = %v, want nil (missing source must surface as message, not error)", err)
 	}
 }
+
+func TestDemoIniTplBytes(t *testing.T) {
+	// DemoIniTpl must be byte-for-byte identical with the historical
+	// cmd/supd/etc/supd/conf.d/demo.ini.tpl file so users can rely on
+	// the documented instructions ("rename this tpl to demo.ini for
+	// running").
+	const onDisk = "../../../cmd/supd/etc/supd/conf.d/demo.ini.tpl"
+	data, err := os.ReadFile(onDisk)
+	if err != nil {
+		t.Fatalf("could not read %s: %v", onDisk, err)
+	}
+	if string(data) != DemoIniTpl {
+		t.Fatalf("DemoIniTpl mismatch with %s (on-disk %d bytes vs const %d bytes)",
+			onDisk, len(data), len(DemoIniTpl))
+	}
+}
