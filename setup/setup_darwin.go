@@ -1,16 +1,16 @@
 //go:build darwin
 
-package supd
+package setup
 
 import (
 	"fmt"
 	"os"
 )
 
-// darwinPlist renders /Library/LaunchDaemons/supd.plist for the given
+// DarwinPlist renders /Library/LaunchDaemons/supd.plist for the given
 // bin-path + etc-path. Matches the legacy script/supd.plist byte-for-byte
 // when the paths match the defaults (/usr/local/bin and /etc/supd).
-func darwinPlist(binPath, etcPath string) string {
+func DarwinPlist(binPath, etcPath string) string {
 	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -53,7 +53,7 @@ func setupDarwin(op, src, binPath, etcPath string) error {
 		if err := installBin(src, binPath, etcPath); err != nil {
 			return err
 		}
-		if err := writeAsRoot(darwinPlistPath, []byte(darwinPlist(binPath, etcPath)), 0644); err != nil {
+		if err := writeAsRoot(darwinPlistPath, []byte(DarwinPlist(binPath, etcPath)), 0644); err != nil {
 			return err
 		}
 		return sudoExec("launchctl", "load", darwinPlistPath)
@@ -84,5 +84,5 @@ func setupDarwin(op, src, binPath, etcPath string) error {
 }
 
 func init() {
-	setupHandlers["darwin"] = setupDarwin
+	handlers["darwin"] = setupDarwin
 }

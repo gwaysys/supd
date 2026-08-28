@@ -1,16 +1,16 @@
 //go:build linux
 
-package supd
+package setup
 
 import (
 	"fmt"
 	"os"
 )
 
-// systemdServiceUnit renders /lib/systemd/system/supd.service for the given
+// SystemdServiceUnit renders /lib/systemd/system/supd.service for the given
 // bin-path + etc-path. Matches the legacy script/supd.service byte-for-byte
 // when the paths match the defaults (/usr/local/bin and /etc/supd).
-func systemdServiceUnit(binPath, etcPath string) string {
+func SystemdServiceUnit(binPath, etcPath string) string {
 	return fmt.Sprintf(`[Unit]
 Description=Supervisor process control system for UNIX
 Documentation=https://github.com/gwaysys/supd
@@ -50,7 +50,7 @@ func setupSystemd(op, src, binPath, etcPath string) error {
 		if err := installBin(src, binPath, etcPath); err != nil {
 			return err
 		}
-		if err := writeAsRoot(systemdUnitPath, []byte(systemdServiceUnit(binPath, etcPath)), 0644); err != nil {
+		if err := writeAsRoot(systemdUnitPath, []byte(SystemdServiceUnit(binPath, etcPath)), 0644); err != nil {
 			return err
 		}
 		if err := sudoExec("systemctl", "daemon-reload"); err != nil {
@@ -95,5 +95,5 @@ func setupSystemd(op, src, binPath, etcPath string) error {
 }
 
 func init() {
-	setupHandlers["systemd"] = setupSystemd
+	handlers["systemd"] = setupSystemd
 }

@@ -1,4 +1,4 @@
-package supd
+package setup
 
 import (
 	"os"
@@ -23,36 +23,37 @@ func TestSupdIniLiteral(t *testing.T) {
 }
 
 func TestSetupEnvKind(t *testing.T) {
-	got := setupEnvKind()
+	got := envKind()
 	switch got {
 	case "darwin", "systemd", "":
 		// expected
 	default:
-		t.Fatalf("unexpected setupEnvKind() = %q", got)
+		t.Fatalf("unexpected envKind() = %q", got)
 	}
 }
 
 func TestSetupHandlersRegistration(t *testing.T) {
 	// The current build must register exactly one init-system handler
 	// (linux -> systemd, darwin -> darwin). Windows / other builds have none.
-	switch setupEnvKind() {
+	h := HandlerForTest()
+	switch envKind() {
 	case "systemd":
-		if _, ok := setupHandlers["systemd"]; !ok {
-			t.Fatalf("expected setupHandlers[\"systemd\"] to be registered on linux")
+		if _, ok := h["systemd"]; !ok {
+			t.Fatalf("expected handlers[\"systemd\"] to be registered on linux")
 		}
-		if _, ok := setupHandlers["darwin"]; ok {
-			t.Fatalf("setupHandlers[\"darwin\"] must NOT be registered on linux builds")
+		if _, ok := h["darwin"]; ok {
+			t.Fatalf("handlers[\"darwin\"] must NOT be registered on linux builds")
 		}
 	case "darwin":
-		if _, ok := setupHandlers["darwin"]; !ok {
-			t.Fatalf("expected setupHandlers[\"darwin\"] to be registered on darwin")
+		if _, ok := h["darwin"]; !ok {
+			t.Fatalf("expected handlers[\"darwin\"] to be registered on darwin")
 		}
-		if _, ok := setupHandlers["systemd"]; ok {
-			t.Fatalf("setupHandlers[\"systemd\"] must NOT be registered on darwin builds")
+		if _, ok := h["systemd"]; ok {
+			t.Fatalf("handlers[\"systemd\"] must NOT be registered on darwin builds")
 		}
 	default:
-		if len(setupHandlers) != 0 {
-			t.Fatalf("expected zero setupHandlers on unsupported platforms, got %d entries", len(setupHandlers))
+		if len(h) != 0 {
+			t.Fatalf("expected zero handlers on unsupported platforms, got %d entries", len(h))
 		}
 	}
 }
@@ -105,9 +106,9 @@ func TestHasTTY(t *testing.T) {
 }
 
 func TestSetupExecuteUsage(t *testing.T) {
-	// When invoked with no positional args, SetupCommand.Execute must print the
-	// three-line usage and return nil regardless of host state.
-	c := &SetupCommand{}
+	// When invoked with no positional args, Command.Execute must print the
+	// four-line usage and return nil regardless of host state.
+	c := &Command{}
 	if err := c.Execute(nil); err != nil {
 		t.Fatalf("Execute(nil) = %v, want nil", err)
 	}
@@ -122,29 +123,29 @@ func TestSetupExecuteUsage(t *testing.T) {
 }
 
 func TestSetupExecuteUnsupportedOS(t *testing.T) {
-	if setupEnvKind() != "" {
+	if envKind() != "" {
 		t.Skip("test only meaningful on hosts without systemd/darwin")
 	}
-	c := &SetupCommand{Op: "install"}
+	c := &Command{Op: "install"}
 	if err := c.Execute(nil); err != nil {
 		t.Fatalf("Execute on unsupported OS = %v, want nil", err)
 	}
 }
 
 func TestResolveInstallPathsDefaults(t *testing.T) {
-	c := &SetupCommand{}
-	c.resolveInstallPaths()
-	if c.BinPath != setupBinPath {
-		t.Errorf("default BinPath = %q, want %q", c.BinPath, setupBinPath)
+	c := &Command{}
+	c.ResolveInstallPaths()
+	if c.BinPath != BinPath {
+		t.Errorf("default BinPath = %q, want %q", c.BinPath, BinPath)
 	}
-	if c.EtcPath != setupEtcPath {
-		t.Errorf("default EtcPath = %q, want %q", c.EtcPath, setupEtcPath)
+	if c.EtcPath != EtcPath {
+		t.Errorf("default EtcPath = %q, want %q", c.EtcPath, EtcPath)
 	}
 }
 
 func TestResolveInstallPathsOverrides(t *testing.T) {
-	c := &SetupCommand{BinPath: "/opt/supd/bin", EtcPath: "/etc/supd-custom"}
-	c.resolveInstallPaths()
+	c := &Command{BinPath: "/opt/supd/bin", EtcPath: "/etc/supd-custom"}
+	c.ResolveInstallPaths()
 	if c.BinPath != "/opt/supd/bin" {
 		t.Errorf("BinPath not preserved: got %q", c.BinPath)
 	}
@@ -183,9 +184,7 @@ func TestNeedsWriteEmpty(t *testing.T) {
 	}
 }
 
-func TestRunSetupExtractDryRun(t *testing.T) {
-	// Create a fake source binary so locateSourceBinary would find it; but for
-	// runSetupExtract we can pass the source directly.
+func TestRunExtractDryRun(t *testing.T) {
 	src := filepath.Join(t.TempDir(), "fake-supd")
 	if err := os.WriteFile(src, []byte("#!/bin/sh\n"), 0755); err != nil {
 		t.Fatal(err)
@@ -193,20 +192,20 @@ func TestRunSetupExtractDryRun(t *testing.T) {
 	t.Setenv(dryRunEnvName, "1")
 	binPath := "/opt/supd-test/bin"
 
-	if err := runSetupExtract(src, binPath); err != nil {
-		t.Fatalf("runSetupExtract dry-run: %v", err)
+	if err := RunExtract(src, binPath); err != nil {
+		t.Fatalf("RunExtract dry-run: %v", err)
 	}
 }
 
-func TestRunSetupExtractMissingSource(t *testing.T) {
-	if err := runSetupExtract("/no/such/supd", "/tmp/bin"); err == nil {
+func TestRunExtractMissingSource(t *testing.T) {
+	if err := RunExtract("/no/such/supd", "/tmp/bin"); err == nil {
 		t.Fatal("expected error when source binary is missing")
 	}
 }
 
 func TestSetupExecuteExtractMissingSource(t *testing.T) {
 	t.Setenv(sourceEnvName, "/no/such/supd-for-extract-test")
-	c := &SetupCommand{Op: "extract"}
+	c := &Command{Op: "extract"}
 	if err := c.Execute(nil); err != nil {
 		t.Fatalf("Execute(extract) = %v, want nil (missing source must surface as message, not error)", err)
 	}
