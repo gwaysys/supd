@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gwaysys/supd/ctl"
+	"github.com/gwaysys/supd/internal/supd/ctl"
 	"github.com/gwaysys/supd/logger"
-	"github.com/gwaysys/supd/setup"
-	"github.com/gwaysys/supd/svc"
+	"github.com/gwaysys/supd/internal/supd/setup"
+	"github.com/gwaysys/supd/internal/supd/svc"
 
 	"github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
