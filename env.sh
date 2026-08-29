@@ -10,7 +10,7 @@ export GOBIN=$PRJ_ROOT/bin
 export GO111MODULE=on
 
 # Set the sup [command] all directories to be traversed
-export BUILD_ALL_PATH="cmd/supd" # for build
+export BUILD_ALL_PATH="." # for build
 export INSTALL_ALL_PATH="" # for running, using $BUILD_ALL_PATH when not set
 
 # Changing the path can change the version number of the compiler. If not specified, the system's default configuration will be used

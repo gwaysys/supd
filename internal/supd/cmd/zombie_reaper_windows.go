@@ -1,6 +1,6 @@
 // +build windows
 
-package supd
+package cmd
 
 func ReapZombie() {
 }

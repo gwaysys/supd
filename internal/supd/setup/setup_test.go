@@ -213,16 +213,32 @@ func TestSetupExecuteExtractMissingSource(t *testing.T) {
 
 func TestDemoIniTplBytes(t *testing.T) {
 	// DemoIniTpl must be byte-for-byte identical with the historical
-	// cmd/supd/etc/supd/conf.d/demo.ini.tpl file so users can rely on
-	// the documented instructions ("rename this tpl to demo.ini for
-	// running").
-	const onDisk = "../../../cmd/supd/etc/supd/conf.d/demo.ini.tpl"
-	data, err := os.ReadFile(onDisk)
-	if err != nil {
-		t.Fatalf("could not read %s: %v", onDisk, err)
-	}
-	if string(data) != DemoIniTpl {
-		t.Fatalf("DemoIniTpl mismatch with %s (on-disk %d bytes vs const %d bytes)",
-			onDisk, len(data), len(DemoIniTpl))
+	// cmd/supd/etc/supd/conf.d/demo.ini.tpl file. That on-disk file
+	// was removed along with the cmd/ directory; verify against a
+	// pinned literal that mirrors its documented byte sequence.
+	want := "# rename this tpl to demo.ini for running\n" +
+		"[program:demo]\n" +
+		"#user=root # run user\n" +
+		"#environment=GIN_MODE=\"release\"\n" +
+		"#directory= # current run directory\n" +
+		"command=ping 163.com # run program\n" +
+		"autostart=true\n" +
+		"startsecs=3\n" +
+		"startretries=3\n" +
+		"autorestart=true\n" +
+		"exitcodes=0,2\n" +
+		"stopsignal=TERM\n" +
+		"stopwaitsecs=10\n" +
+		"#stopasgroup=true\n" +
+		"#killasgroup=true\n" +
+		"stdout_logfile=$PRJ_ROOT/var/log/demo.logfile.stdout # if PRJ_ROOT not set, using the root directory\n" +
+		"stdout_logfile_maxbytes=1MB\n" +
+		"stdout_logfile_backups=10\n" +
+		"stderr_logfile=$PRJ_ROOT/var/log/demo.logfile.stderr\n" +
+		"stderr_logfile_maxbytes=1MB\n" +
+		"stderr_logfile_backups=10\n"
+	if want != DemoIniTpl {
+		t.Fatalf("DemoIniTpl mismatch (pinned literal %d bytes vs const %d bytes)",
+			len(want), len(DemoIniTpl))
 	}
 }

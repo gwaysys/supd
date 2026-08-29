@@ -1,4 +1,4 @@
-package supd
+package cmd
 
 import (
 	"github.com/gwaysys/supd/internal/supd/setup"

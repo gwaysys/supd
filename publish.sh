@@ -5,7 +5,7 @@ mkdir -p $target_dir
 
 export CGO_ENABLED=0
 
-go build -ldflags="-s -w" -o bin/supd cmd/supd/main.go ||exit 0
+go build -ldflags="-s -w" -o bin/supd . ||exit 0
 
 # The setup logic now lives inside the supd binary itself (see setup.go).
 # Final deliverable is a single binary + etc configuration; no shell wrappers shipped.
