@@ -3,16 +3,16 @@
 // here: it owns the root flag parser, the cross-subcommand Options
 // struct (--configuration / --daemon / --env-file) and the Run() helper
 // invoked by the repo-root main.go. All actual implementation lives in
-// the setup/ctl/svc subpackages under internal/supd/.
+// the setup/ctl/svc subpackages under internal/.
 package cmd
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/gwaysys/supd/internal/supd/ctl"
-	"github.com/gwaysys/supd/internal/supd/setup"
-	"github.com/gwaysys/supd/internal/supd/svc"
+	"github.com/gwaysys/supd/internal/ctl"
+	"github.com/gwaysys/supd/internal/setup"
+	"github.com/gwaysys/supd/internal/svc"
 	"github.com/gwaysys/supd/logger"
 
 	"github.com/jessevdk/go-flags"

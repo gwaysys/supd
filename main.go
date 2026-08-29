@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/gwaysys/supd/internal/supd/cmd"
+	"github.com/gwaysys/supd/internal/cmd"
 )
 
 // Entry point for the supd binary. The repository previously kept this
