@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"io"
-	"os"
+	"fmt"
 )
 
 var config_template = `[unix_http_server]
@@ -114,30 +113,27 @@ password = 123
 #prompt = not support
 `
 
-type InitTemplateCommand struct {
-	OutFile string `short:"o" long:"output" description:"the output file name" required:"true"`
-}
+// TemplateCommand prints the supported supd configuration template to
+// stdout. Previously known as InitTemplateCommand, the rename reflects
+// the fact that it no longer writes to a file -- it just dumps the
+// template so users can pipe it to `tee` / redirect / grep as desired.
+type TemplateCommand struct{}
 
-var initTemplateCommand InitTemplateCommand
+var templateCommand TemplateCommand
 
-func (x *InitTemplateCommand) Execute(args []string) error {
-	f, err := os.Create(x.OutFile)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	return GenTemplate(f)
-}
-
-func GenTemplate(writer io.Writer) error {
-	_, err := writer.Write([]byte(config_template))
+// Execute prints the configuration template to stdout. With no flag or
+// positional arguments the go-flags parser invokes Execute directly
+// and the entire template is emitted on a single stdout write.
+func (x *TemplateCommand) Execute(args []string) error {
+	_, err := fmt.Print(config_template)
 	return err
 }
 
 func init() {
-	parser.AddCommand("init",
-		"initialize a template",
-		"The init subcommand writes the supported configurations to specified file",
-		&initTemplateCommand)
-
+	parser.AddCommand("template",
+		"print supported configuration template to stdout",
+		"The template subcommand prints the full supd configuration "+
+			"template (every supported section) to stdout. Pipe or redirect "+
+			"the output to create a starter supd.ini.",
+		&templateCommand)
 }
