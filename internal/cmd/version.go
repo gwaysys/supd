@@ -4,10 +4,7 @@ import (
 	"fmt"
 )
 
-var (
-	Version   = "0.0.0"
-	GitCommit = "dev"
-)
+const Version = "v1.2.0"
 
 type VersionCommand struct {
 }
@@ -15,7 +12,7 @@ type VersionCommand struct {
 var versionCommand VersionCommand
 
 func (v VersionCommand) Execute(args []string) error {
-	fmt.Printf("%s-%s\n", Version, GitCommit)
+	fmt.Println(Version)
 	return nil
 }
 
