@@ -9,6 +9,12 @@ export PRJ_NAME="supd"
 export GOBIN=$PRJ_ROOT/bin
 export GO111MODULE=on
 
+export BUILD_VER="v1.2.0"
+# Env of the var path which the version will write to, example: github.com/gwaysys/supd/version.Version
+export BUILD_VER_PATH="github.com/gwaysys/supd/internal/cmd.Version" 
+# Env of the var path which git describe will write to, example: github.com/gwaysys/supd/version.GitCommit
+export BUILD_GIT_PATH="github.com/gwaysys/supd/internal/cmd.GitCommit"
+
 # Set the sup [command] all directories to be traversed
 export BUILD_ALL_PATH="." # for build
 export INSTALL_ALL_PATH="" # for running, using $BUILD_ALL_PATH when not set

@@ -181,26 +181,81 @@ supStatus() {
 }
 
 goBuild() {
-    ldflags=$BUILD_LDFLAGS
-    if [ ! -z "$BUILD_GIT_COMMIT" ]; then
+    # Accumulate every -X=path=value and BUILD_LDFLAGS content into a single
+    # comma-free buffer (_ldflag_args), then emit exactly one "-ldflags" at
+    # the final `go build` call site. This avoids the previous bug where
+    # each branch prepended its own "-ldflags ...", causing `go build` to
+    # honor only the last one and silently drop earlier -X injections.
+    _ldflag_args=""
+    addLdflag() {
+        # addLdflag "<space-separated tokens>"
+        if [ -z "$1" ]; then
+            return 0
+        fi
+        if [ -z "$_ldflag_args" ]; then
+            _ldflag_args="$1"
+        else
+            _ldflag_args="$_ldflag_args $1"
+        fi
+    }
+
+    # Normalize BUILD_LDFLAGS: strip a leading "-ldflags" token (with or
+    # without an "=" continuation), then merge the remaining tokens.
+    case "$BUILD_LDFLAGS" in
+        "-ldflags="*)
+            addLdflag "${BUILD_LDFLAGS#-ldflags=}"
+            ;;
+        "-ldflags "*|"-ldflags	"*)
+            addLdflag "${BUILD_LDFLAGS#-ldflags}"
+            ;;
+        *)
+            addLdflag "$BUILD_LDFLAGS"
+            ;;
+    esac
+
+    if [ -z "$BUILD_VER" ]; then
+        BUILD_VER="v0.0.0"
+    fi
+    if [ ! -z "$BUILD_VER_PATH" ]; then
+        addLdflag "-X=$BUILD_VER_PATH=$BUILD_VER"
+    fi
+
+    # for new build
+    if [ ! -z "$BUILD_GIT_PATH" ]; then
         commit=$(git describe --always --match=NeVeRmAtCh --dirty 2>/dev/null)
         if [ ! -z "$commit" ]; then
-            if [ -z "$ldflags" ]; then
-                ldflags="-ldflags -X=$BUILD_GIT_COMMIT=$commit "
-            else
-                ldflags="-ldflags -X=$BUILD_GIT_COMMIT=$commit "$ldflags
-            fi
+            addLdflag "-X=$BUILD_GIT_PATH=$commit"
         else
-            echo "Found BUILD_GIT_COMMIT enviroment, but git describe is unavailable"
+            echo "Found BUILD_GIT_PATH enviroment, but git describe is unavailable"
         fi
+    else
+        # for old build
+        if [ ! -z "$BUILD_GIT_COMMIT" ]; then
+            commit=$(git describe --always --match=NeVeRmAtCh --dirty 2>/dev/null)
+            if [ ! -z "$commit" ]; then
+                addLdflag "-X=$BUILD_GIT_COMMIT=$commit"
+            else
+                echo "Found BUILD_GIT_COMMIT enviroment, but git describe is unavailable"
+            fi
+        fi
+    fi
+
+    # Emit a single "-ldflags" only when the buffer is non-empty.
+    _ldflag_opt=""
+    if [ ! -z "$_ldflag_args" ]; then
+        _ldflag_opt="-ldflags \"$_ldflag_args\""
     fi
 
     # go build
     if [ $# -gt 0 ]; then
-        go build $ldflags $@ || exit 0
+        # shellcheck disable=SC2086 # _ldflag_opt intentionally word-splits as multiple args.
+        eval "set -- $_ldflag_opt"
+        go build "$@" || exit 0
     else
         echo '#' "Building ($cfg_name)"
-        go build $ldflags || exit 0
+        # shellcheck disable=SC2086 # _ldflag_opt intentionally word-splits as multiple args.
+        eval "set -- $_ldflag_opt"
+        go build "$@" || exit 0
     fi
 }
 
@@ -503,8 +558,10 @@ case "$1" in
        echo "\$PRJ_ROOT # Project path, which indicates the root directory where the current project is running."
        echo ""
        echo "\$BUILD_ALL_PATH # Paths of build all, exmaple: 'cmd1 cmd2'"
-       echo "\$BUILD_LDFLAGS # Env for go build -ldfalgs \$BUILD_LDFLAGS"
-       echo "\$BUILD_GIT_COMMIT # Env of the var path which git describe will write to, example: github.com/gwaysys/supd/version.GitCommit"
+       echo "\$BUILD_LDFLAGS # Extra tokens to merge into '-ldflags'. If it already starts with '-ldflags', the prefix is stripped and the rest is merged with the auto-generated -X=path=value injections, then emitted as a single '-ldflags \"...\"'. Example: '-s -w' or '-X=pkg/Other=foo'."
+       echo "\$BUILD_VER # Env of building version, default is 'v0.0.0' if not set"
+       echo "\$BUILD_VER_PATH # Env of the var path which the version will write to, example: github.com/gwaysys/supd/version.Version"
+       echo "\$BUILD_GIT_PATH # Env of the var path which git describe will write to, example: github.com/gwaysys/supd/version.GitCommit"
        echo ""
        echo "\$PUB_ROOT_RES # The resource folder name of the project root directory collected during publishing. If it is not filled in, it will be the default: etc"
        echo "\$PUB_APP_RES # The resource folder name in the current directory is applied when publishing. If it is not filled in, it defaults to: res public"
