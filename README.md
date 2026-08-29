@@ -11,17 +11,9 @@ toolchain (1.13 or newer).
 ```text
 git clone https://github.com/gwaysys/supd.git
 cd supd
-./publish.sh         # builds bin/supd and stages publish/supd/
-sudo ./bin/supd setup install   # install into /usr/local/bin + /etc/supd
-sudo ./bin/supd setup clean     # uninstall (leaves /etc/supd for manual removal)
-```
-
-`publish.sh` defaults to `go build .` from the repo root. If you only
-need the binary for personal use you can skip `publish.sh` entirely:
-
-```text
-go build -o bin/supd .
-sudo ./bin/supd setup install
+go build
+sudo ./supd setup install   # install into /usr/local/bin + /etc/supd
+sudo ./supd setup clean     # uninstall (leaves /etc/supd for manual removal)
 ```
 
 ## Install via `go install`
