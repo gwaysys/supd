@@ -25,7 +25,7 @@ toolchain to download a pre-built module from GitHub and place it in
 ```text
 go install github.com/gwaysys/supd@latest    # latest tagged release
 # or pin a specific version:
-go install github.com/gwaysys/supd@v1.1.6
+go install github.com/gwaysys/supd@v1.2.0
 
 sudo supd setup install   # registers supd with systemd / launchd,
                           # drops /usr/local/bin/{supd,supc} and
