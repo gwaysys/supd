@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"github.com/gwaylib/errors"
-	"github.com/gwaysys/supd/config"
-	"github.com/gwaysys/supd/events"
-	"github.com/gwaysys/supd/logger"
-	"github.com/gwaysys/supd/signals"
+	"github.com/gwaysys/supd/internal/config"
+	"github.com/gwaysys/supd/internal/events"
+	"github.com/gwaysys/supd/internal/logger"
+	"github.com/gwaysys/supd/internal/signals"
 	log "github.com/sirupsen/logrus"
 )
 

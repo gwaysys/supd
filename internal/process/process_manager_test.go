@@ -1,7 +1,7 @@
 package process
 
 import (
-	"github.com/gwaysys/supd/config"
+	"github.com/gwaysys/supd/internal/config"
 	"testing"
 )
 

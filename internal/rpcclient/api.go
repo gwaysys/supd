@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gwaylib/errors"
-	"github.com/gwaysys/supd/types"
+	"github.com/gwaysys/supd/internal/types"
 )
 
 type StatusReply struct {

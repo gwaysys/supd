@@ -18,7 +18,7 @@ import (
 	"syscall"
 	"unicode"
 
-	"github.com/gwaysys/supd/logger"
+	"github.com/gwaysys/supd/internal/logger"
 
 	log "github.com/sirupsen/logrus"
 )

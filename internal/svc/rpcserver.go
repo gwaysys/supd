@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/gwaylib/errors"
-	"github.com/gwaysys/supd/rpcclient"
+	"github.com/gwaysys/supd/internal/rpcclient"
 
 	log "github.com/sirupsen/logrus"
 )

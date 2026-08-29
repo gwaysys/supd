@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gwaysys/supd/config"
-	"github.com/gwaysys/supd/rpcclient"
+	"github.com/gwaysys/supd/internal/config"
+	"github.com/gwaysys/supd/internal/rpcclient"
 	"github.com/gwaysys/supd/internal/svc"
-	"github.com/gwaysys/supd/types"
+	"github.com/gwaysys/supd/internal/types"
 
 	"github.com/gwaylib/errors"
 	"github.com/hpcloud/tail"
